@@ -119,7 +119,7 @@ def process(case):
 
 if __name__ == '__main__':
     
-    cases = np.arange(20)
+    cases = np.arange(57)
     
     data = np.zeros(len(cases),
                         dtype=list(zip(['a','f','Sa','Sf','mean_tilt','tilt_std','comment'],['float']*6+['object']))
@@ -131,7 +131,7 @@ if __name__ == '__main__':
 
     # hypothesis testing the null case
     z_score = data[0]['f']/data[0]['Sf']  # assuming the slope is actually zero (b/c no tilts)
-    p-value = stats.norm.sf(abs(z_score)) # look for the probability to get the estimated mean
+    p_value = stats.norm.sf(abs(z_score)) # look for the probability to get the estimated mean
     fig_hyp, ax_hyp = plot_gauss(data['f'][0],data['Sf'][0])
     ax_hyp.vlines(0,0,500,colors='red')
 
