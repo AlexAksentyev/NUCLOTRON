@@ -1,0 +1,310 @@
+
+INCLUDE '~/REPOS/COSYINF-CORE/bin/utilities';
+
+PROCEDURE ROTATE PHI {deg};
+  VARIABLE M NM1 4; VARIABLE ANG NM2;
+  VARIABLE i 1;
+  ANG := PHI*DEGRAD; { deg -> rad }
+  M(1):= COS(ANG)*MAP(1) + SIN(ANG)*MAP(3);
+  M(3):=-SIN(ANG)*MAP(1) + COS(ANG)*MAP(3);
+  M(2):= COS(ANG)*MAP(2) + SIN(ANG)*MAP(4);
+  M(4):=-SIN(ANG)*MAP(2) + COS(ANG)*MAP(4);
+  LOOP i 1 4; MAP(i):=M(i);  ENDLOOP;
+ENDPROCEDURE; {ROTATE}
+
+FUNCTION KMULT KNL L; {COMPUTES MAGNETIC INDUCTION gradient^n FOR A MADX MULTIPOLE ELEMENT}
+  KMULT := KNL/L * CONS(CHIM);  {this is Kn = d^n B / dx^n; to get the B multiply by Aperture^n}
+ENDFUNCTION; {KMULT}
+
+PROCEDURE THINMQ L {m} TILT {rad} K1 {m^-2};
+                 {see QUAD for parameter explanations}
+  VARIABLE OM NM1;
+  WRITE 6 '***** THIN QUADRUPOLE DEFINITION';
+  OM := SQRT(ABS(K1));
+  UMS;
+  {load thin quad orbital map into MSC}
+  IF CONS(K1)>0;
+    MSC(2) := -OM*SIN(OM*L)*DD(1) + 1*DD(2);
+    MSC(4) := OM*SINH(OM*L)*DD(3) + 1*DD(4);
+  ELSEIF CONS(K1)<0;
+    MSC(2) := OM*SINH(OM*L)*DD(1) + 1*DD(2);
+    MSC(4) := -OM*SIN(OM*L)*DD(3) + 1*DD(4);
+  ELSEIF TRUE;
+    DL L;
+  ENDIF;
+  {load thin quad spin map into SSCR}
+  {*** NOT IMPLEMENTED yet, SSCR = Identity ***}
+  {apply MSC and SSCR to MAP, SPNR respectively.}
+  LOCSET 0 0 0 0 0 0; UPDATE 1 1;
+ENDPROCEDURE;
+
+PROCEDURE QUAD1 L {m} TILT G; {BNL-type quadrupole definition}
+  VARIABLE L0 1;
+  VARIABLE G0 1;
+  VARIABLE TILT0 1;
+  WRITE 6 'BNL TYPE QUAD IN NICA FS';
+
+  L0:=L;{in meters}
+  IF (G=0); WRITE 6 'G=0';
+    DL L0;
+  ELSEIF (1=1); 
+    G0:=G*10;{in Tesla/m}
+    TILT0:=TILT;
+    ROTATE TILT0;
+    WRITE 6 'B = '&ST(G0*.05);
+    MQ L0 G0*0.05 0.05; {Magnetic quadrupole}
+    {WRITE 6 'MQ' L0 G0*0.05;}
+    ROTATE -TILT0;
+  ENDIF;
+ENDPROCEDURE; { END OF QUADRUPOLE }
+
+
+PROCEDURE QUAD0 L {m} TILT {rad} K1 {m^-2} ;  {this version of quad rotates it about the optic axis}
+                                                    {*** (NO EFFECT ON SPIN DYNAMICS) ***}
+  {L quadrupole length}
+  {K1 = B_Y/X / (B_0 R) [m^-2]}
+      {COSY wants magnetic induction at the pole,}
+      {which is B_y(a) = B*\rho*K_1*a, a = aperture}
+      {checked with Optim; there K1 is Tl/m (not normalized by B\rho)}
+      {hence B_y(a) = K1 * a in the automatic converter}
+  VARIABLE Bpt NM1; {magnetic induction (flux density @ pole tip)}
+  VARIABLE A 1; {aperture}
+  VARIABLE TILT0 1;
+  TILT0 := RAD2DEG(TILT);
+  A:=.05;
+  Bpt := K1*CONS(CHIM)*A; {in Tesla}
+  { WRITE 6 'K1[m^-2]        B[Tl]          G[kG/cm]       ' }
+  {          SF(CONS(K1), '(E15.7)')&SF(CONS(Bpt), '(E15.7)')&SF(CONS(Bpt)/A/10,'(E15.7)'); }
+  IF Bpt=0; DL L;
+  ELSEIF TRUE;
+    ROTATE  TILT0;
+      MQ L Bpt A;
+   ROTATE -TILT0;
+ ENDIF;
+ENDPROCEDURE; {QUAD}
+
+PROCEDURE QUAD L {m} SHIFT {VERTICAL C.O. SHIFT IN meters} K1 {m^-2} ;
+  {L quadrupole length}
+  {K1 = B_Y/X / (B_0 R) [m^-2]}
+      {COSY wants magnetic induction at the pole,}
+      {which is B_y(a) = B*\rho*K_1*a, a = aperture}
+      {checked with Optim; there K1 is Tl/m (not normalized by B\rho)}
+      {hence B_y(a) = K1 * a in the automatic converter}
+  VARIABLE Bpt NM1; {magnetic induction (flux density @ pole tip)}
+  VARIABLE A 1; {aperture}
+  VARIABLE BX 1; VARIABLE TOF 1; VARIABLE DWMDM 1;VARIABLE GAMMA 1;
+
+
+  A:=.05;
+  Bpt := K1*CONS(CHIM)*A; {in Tesla}
+ 
+  IF Bpt=0; DL L;
+  ELSEIF TRUE;
+      MQ L Bpt A;
+  ENDIF;
+
+
+ IF SHIFT#0; {this version of SHIFT implementation is only spin-dynamics effective * @AM}
+    BX := K1*CONS(CHIM)*SHIFT;
+    GAMMA := CONS(1 + E0/(M0*AMUMEV));
+    DWMDM := Z0/(M0*GAMMA)*EZERO/AMU*(GAMMA*G0+1)*BX;
+    TOF := L/CONS(V0);
+    RSX TOF*DWMDM/DEGRAD;
+  ENDIF;
+
+ENDPROCEDURE; {QUAD}
+
+PROCEDURE SEXT L {m} TILT {rad} KNL {unit};
+  VARIABLE Bpt 1; VARIABLE TILT0 1; VARIABLE A 1;
+  VARIABLE L0 1;
+  A := .05;
+  Bpt := KMULT(KNL, L)*A*A;
+  WRITE 6 'Bpt = '&SF(Bpt, '(E15.7)');
+  TILT0 := RAD2DEG(TILT);
+  IF Bpt=0; DL L;
+  ELSEIF TRUE;
+    ROTATE TILT0;
+      MH L Bpt .05;
+    ROTATE -TILT0;
+  ENDIF;
+ENDPROCEDURE; {SEXT}
+
+PROCEDURE OCT L {m} TILT {rad} KNL {unit};
+  VARIABLE Bpt 1; VARIABLE TILT0 1; VARIABLE A 1;
+  A := .05;
+  Bpt := KMULT(KNL, L)*A*A*A;
+  WRITE 6 'Bpt = '&SF(Bpt, '(E15.7)');
+  IF Bpt=0; DL L;
+  ELSEIF TRUE;
+    ROTATE TILT0;
+      MO L Bpt A;
+    ROTATE -TILT0;
+  ENDIF;
+ENDPROCEDURE; {OCT}
+
+PROCEDURE MULT TILT {rad} KNL {unit} N;
+  VARIABLE Kpt 1; VARIABLE I 1; VARIABLE A 1;
+  VARIABLE L0 1; VARIABLE FLAG 1; {used to check magnetic field components against 0}
+  VARIABLE TILT0 1;
+  L0 := 1e-6; A:= .05;
+  Kpt := KMULT(KNL(N), L0);
+  TILT0 := RAD2DEG(TILT);
+  IF N=2; { WRITE 6 'QUAD'; } { DL 0; }
+    MQ L0 Kpt*A A;
+    DL -L0;
+  ELSEIF N=3; { WRITE 6 'SEXT'; } { DL 0; }
+    MH L0 Kpt*A*A A;
+    DL -L0;
+  ELSEIF N=4; { WRITE 6 'OCT';  }{ DL 0; }
+    MO L0 Kpt*A*A*A A;
+    DL -L0;
+  ELSEIF TRUE;
+    WRITE 6 '*** UNDEFINED ELEMENT ERROR ***';
+  ENDIF;
+ENDPROCEDURE;
+
+PROCEDURE SBEND L {m} ANGLE {rad} TILT {rad} E1 {rad} H1 {1/m} E2 {rad} H2{1/m} FINT {unit} FINTX {unit};
+  VARIABLE R 1; VARIABLE ANGLE0 1; VARIABLE TILT0 1;
+  VARIABLE E10 1; VARIABLE E20 1;
+  VARIABLE B0 1; VARIABLE BX 1;
+  VARIABLE GAMMA 1; VARIABLE TOF 1; VARIABLE DWMDM 1;
+  E10 := E1/DEGRAD;
+  E20 := E2/DEGRAD;
+  ANGLE0 := ABS(ANGLE)/DEGRAD;
+  TILT0 := TILT/DEGRAD;  {deg * }
+  R := L/ABS(ANGLE);  
+  IF ANGLE<0; CB; ENDIF;
+  { ROTATE TILT0; }   { * }
+    DI R ANGLE0 .1 E10 H1 E20 H2;
+  { ROTATE -TILT0; }  { * }
+  IF ANGLE<0; CB; ENDIF;
+  IF TILT#0; {this version of tilt implementation is only spin-dynamics effective * }
+    B0 := CONS(CHIM)/R; {B = BRho/Rho}
+    BX := B0*TAN(TILT); {B0 = B' cos theta; Bx = B' sin theta}
+    GAMMA := CONS(1 + E0/(M0*AMUMEV));
+    DWMDM := Z0/(M0*GAMMA)*EZERO/AMU*(GAMMA*G0+1)*BX; { since it is RSX (vertical) we don't remove +1 from (yG+1)*B }
+                                      {rad/sec} 
+    TOF := L/CONS(V0);                {sec}
+    RSX TOF*DWMDM/DEGRAD;             {deg} 
+  ENDIF;
+ENDPROCEDURE; {SBEND}
+
+PROCEDURE RBEND L {m} ANGLE {rad} TILT {rad};
+  VARIABLE R 1; VARIABLE ANGLE_DEG 1; VARIABLE TILT0 1;
+  {variables needed for MCLK}
+  VARIABLE NT 1;
+  VARIABLE KN 1 1;
+  VARIABLE S1 1 1;
+  VARIABLE S2 1 1;
+  VARIABLE B 1;
+
+  { WRITE 6 '********** RBEND'; }
+  NT := 1;
+  B := CONS(P0)/(CLIGHT*1E-6) * ANGLE/L;
+  KN(1) := 0; S1(1) := 0; S2(1) := 0;
+  ANGLE_DEG := ABS(ANGLE)/DEGRAD;
+  TILT0 := TILT/DEGRAD;
+  R := L/ABS(ANGLE);
+  { WRITE 6 'ANGLE[rad]      ANGLE[deg]      R[m]            B[Tl]' }
+  {          SF(ANGLE,'(F15.7)')&SF(ANGLE_DEG, '(F15.7)')&SF(R, '(F15.7)')&' '&SF(B, '(F15.7)'); }
+  IF ANGLE<0; CB; WRITE 6 'CB'; ENDIF;
+  ROTATE TILT0;
+    DP R ANGLE_DEG .05;
+  ROTATE -TILT0;
+  IF ANGLE<0; CB; ENDIF;
+ENDPROCEDURE; {RBEND}
+
+PROCEDURE SOLENOID L {m} KS {rad/m}; {this solenoid implementation accounts for the saturation effect (top B-field)}
+  VARIABLE B0 1; VARIABLE A 1;
+  VARIABLE BTOP 1; {maximum magnetic field in solenoid; cannot go any further}
+  BTOP := 6; {the 2ST scheme requires 4 6-T solenoids, so I assume 6T is reacheable}
+  A  := .05;
+  B0 := KS * CONS(CHIM); WRITE 6 'SOLENOID MAGNETIC FIELD COMPUTED:'&SF(B0, '(F15.7)')&' Tl';
+  IF (B0>BTOP); B0 := BTOP; WRITE 6 'SOLENOID REACHED SATURATION; SETTING Btop FIELD (6T)!'; ENDIF;
+  IF (B0 = 0);
+    DL L; WRITE 6 'SOLENOID IS OFF';
+  ELSEIF TRUE;
+    CMS B0 A L;
+  ENDIF;
+ENDPROCEDURE; {SOLENOID}
+
+PROCEDURE RFCAV L {m} VOLT {MV} LAG {rad} HARMON {unit};
+  IF VOLT=0;
+    DL L;
+  ELSEIF TRUE;
+    WRITE 6 'UNIMPLEMENTED ERROR!';
+  ENDIF;
+ENDPROCEDURE;
+
+PROCEDURE KICK L {m} KX {unit} KY {unit};
+  IF ((KX=0) * (KY=0));
+    DL L;
+  ELSEIF TRUE;
+    WRITE 6 'UNIMPLEMENTED ERROR!';
+  ENDIF;
+ENDPROCEDURE;
+
+PROCEDURE WIEN L2 {m} B1 {kGs} B2 {kV/cm} TILT {rad}; {homogenous WF; closed orbit preserved}
+{parasitic (tilt) fields are implemented via a spin kick like Eremey thesis section 6.5.3}
+  VARIABLE R1 1;
+  VARIABLE R2 1;
+  VARIABLE B0 1; VARIABLE B3 1;
+  VARIABLE L1 1;
+  VARIABLE TILT0 1; VARIABLE TOF 1;
+  VARIABLE BX 1; VARIABLE EY 1;
+  VARIABLE BETA 1;VARIABLE GAMMA 1;
+  VARIABLE DWMDMb 1; VARIABLE DWMDMe 1; VARIABLE DWMDM 1;
+  L1:=L2; {in meters}
+  B0:=ABS(B1)/10; {in Tesla}
+  B3:=ABS(B2)*1e5;   {in V/m}
+  R2:=CONS(CHIM)/B0;
+  R1:=CONS(CHIE)/B3;
+  { WRITE 6 'RE = '&SF(R1, '(E15.7)')&' RB ='&SF(R2, '(E15.7)'); }
+  TILT0 := TILT;
+  WF R1 R1 L1 0.05;             {use equal radii (R1 R1) for no bend effect in the Wien-filter}
+  B0 := CONS(CHIM)/R1;          {recompute: R2 = R1 -> B0 = CHIM/R1}
+  IF TILT0#0; { WRITE 6 '-> rotating WF by tilt = '&ST(TILT0); }
+    BX := B0*TAN(TILT0); { WRITE 6 '--> BX, B0 = '&ST(BX)&', '&ST(B0); }
+    EY := CONS(CHIE)/CONS(CHIM)*BX; { WRITE 6 '--> EY = '&ST(EY); }
+    BETA := CONS(V0)/CLIGHT;
+    GAMMA := CONS(1 + E0/(M0*AMUMEV));
+    DWMDMb := (GAMMA*G0+1)*BX;                          {reduced   *}
+    DWMDMe := - GAMMA*(G0 + 1/(GAMMA+1))*BETA*EY/CLIGHT;  {reduced   *}  {original: [ - (G0 - 1/BETA/BETA + 1)*BETA*EY/CLIGHT ] }
+    DWMDM := Z0/(M0*GAMMA)*EZERO/AMU*(DWMDMb + DWMDMe); {fulfilled *}                      {rad/sec}
+    TOF := L1/CONS(V0); { WRITE 6 '---> delta W mdm = '&ST(DWMDM); }                       {sec}
+    RSX TOF*DWMDM/DEGRAD; { WRITE 6 '---> extra radial spin rotation = '&ST(TOF*DWMDM); }  {deg}
+  ENDIF;    
+ENDPROCEDURE; { END OF WIEN }
+
+PROCEDURE RADC0 L {m} W {rad/s};
+  VARIABLE L1 1; VARIABLE TOF 1;
+  TOF := L1/CONS(V0);
+  RSX TOF*W;
+ENDPROCEDURE;
+
+PROCEDURE RADC1 L {m} B {kGs} ; { radial magnetic field compensator (modeled by RSX) }
+  VARIABLE L1 1;
+  VARIABLE BX 1; VARIABLE EY 1;
+  VARIABLE BETA 1; VARIABLE DWMDM 1; VARIABLE TOF 1;
+  L1 := L; {in meters}
+  BX := ABS(B)/10; {in Tesla}
+  
+  EY := CONS(CHIE)/CONS(CHIM)*BX; {corresponding E-field [in V/m] for CO preservation (chim/Bx = r1 = r2 = chie/Ey)}
+  BETA := CONS(V0)/CLIGHT;
+  DWMDM := Z0/M0*EZERO/AMU*(G0*BX - (G0 - 1/BETA/BETA + 1)*BETA*EY/CLIGHT); {spin angular velocity due to Bx, Ey,}
+  TOF := L1/CONS(V0);                                                                   { according to T-BMT }
+  
+  DL L; RSX TOF*DWMDM;
+ENDPROCEDURE;
+
+PROCEDURE RADC L {m} W {rad/s} ;
+  VARIABLE L1 1; VARIABLE W1 1; VARIABLE TOF 1;
+  VARIABLE DS 1;
+  L1 := L;
+  W1 := W;            { WRITE 6 'RADIAL CORRECTOR'; }
+  TOF := L1/CONS(V0); { WRITE 6 'TIME-OF-FLIGHT = '&SF(TOF, '(E15.7)'); }
+  DS := TOF * W;      { WRITE 6 'DELTA SPIN = '&SF(DS, '(E15.7)'); }
+  DL L; RSX DS;
+ENDPROCEDURE;
+
+SAVE 'bin/elements';
