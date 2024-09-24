@@ -125,7 +125,7 @@ PROCEDURE RUN;
     CLOSEF 100492;
   TILTLAT TILTS WHERE MRKR;
   
-  LOOP I 1 200;                                      {tilted cases}
+  LOOP I 187 200;                                      {tilted cases}
     MRKR := 'CASE_'&MRK(I);
     TILTS := VEGAUSS(1e-5, 1E-4, 48, WHERE&'TILTS:'&MRKR); {in radians}
     TILTLAT TILTS WHERE MRKR;

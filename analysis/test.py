@@ -11,7 +11,7 @@ mpl.rcParams['font.size']=14
 
 LATTICE = 'MOD2'
 
-DATDIR = '../data/'+LATTICE+'/'
+DATDIR = '../data/'+LATTICE+'/TRACKING/'
 
 Wcyc = .5822942764643650e6 # cyclotron frequency [Hz = rev/sec]
 TAU = 1/Wcyc
