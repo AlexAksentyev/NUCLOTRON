@@ -1,4 +1,4 @@
-INCLUDE 'bin/setups/MOD2/TILTED';
+INCLUDE 'bin/setups/8PER/8TILTED';
 
 PROCEDURE DATAOUTPUT MRKR_LAT MRKR WHERE;
     VARIABLE MU 800; VARIABLE NBAR 800 3;
@@ -95,7 +95,7 @@ PROCEDURE RUN;
   VARIABLE MRKR 100;
   VARIABLE VAL 1;
 
-  DIRSET WHERE 'data/MOD2/TSS/'; DIRSET_AUTO 1;
+  DIRSET WHERE 'data/8PER/TSS/'; DIRSET_AUTO 1;
   GROUTF 'img/dump/TR' 1;
 
   I := 0;                                           {control case: no tilting }

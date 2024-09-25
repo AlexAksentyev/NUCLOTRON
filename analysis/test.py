@@ -9,7 +9,7 @@ from scipy.optimize import curve_fit
 
 mpl.rcParams['font.size']=14
 
-LATTICE = 'MOD2'
+LATTICE = '8PER'
 
 DATDIR = '../data/'+LATTICE+'/TRACKING/'
 
@@ -119,7 +119,7 @@ def process(case):
 
 if __name__ == '__main__':
     
-    cases = np.arange(57)
+    cases = np.arange(5)
     
     data = np.zeros(len(cases),
                         dtype=list(zip(['a','f','Sa','Sf','mean_tilt','tilt_std','comment'],['float']*6+['object']))
