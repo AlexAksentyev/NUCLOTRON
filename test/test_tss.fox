@@ -1,4 +1,4 @@
-INCLUDE 'bin/setups/8PER/8TILTED';
+INCLUDE 'bin/setups/16PER/16TILTED';
 
 PROCEDURE DATAOUTPUT MRKR_LAT MRKR WHERE;
     VARIABLE MU 800; VARIABLE NBAR 800 3;
@@ -39,7 +39,7 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
 
   {WIEN FILTER}
   {spin tune ~ 10^-7}
-  EB1 := 129.5058235952117; {3.27*2}
+  EB1 := fWFOPTIMUME(1); {cf. corresponding lattice file}
 
   {SEXTUPOLES}
     {natural chromaticity}
@@ -95,7 +95,7 @@ PROCEDURE RUN;
   VARIABLE MRKR 100;
   VARIABLE VAL 1;
 
-  DIRSET WHERE 'data/8PER/TSS-strict0/'; DIRSET_AUTO 1;
+  DIRSET WHERE 'data/16PER/TSS-strict0/'; DIRSET_AUTO 1;
   GROUTF 'img/dump/TR' 1;
 
   I := 0;                                           {control case: no tilting }
