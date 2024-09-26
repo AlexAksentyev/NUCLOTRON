@@ -1,0 +1,172 @@
+INCLUDE 'bin/setups/16PER/16TILTED';
+
+PROCEDURE INJECT NUM PSI_DEG; {at injection: SX = 0, SY, SZ = sin PSI, cos PSI}
+  VARIABLE X 100; VARIABLE I 1;
+  VARIABLE PSI 1; VARIABLE SY 1; VARIABLE SZ 1;
+  PSI := DEG2RAD(PSI_DEG); {PSI IN RADIANS}
+  X := LINSPACE(-1E-3, 1E-3, NUM);
+  SY := SIN(PSI); SZ := COS(PSI);
+  SR 0 0 0 0 0 0 0 0 1; SSR 0 SY SZ;
+  LOOP I 1 NUM;
+    SR X|I 0 0 0 0 0 0 0 1; SSR 0 SY SZ;
+    SR 0 0 X|I 0 0 0 0 0 1; SSR 0 SY SZ;
+    SR 0 0 0 0 0 (X|I)/10 0 0 1; SSR 0 SY SZ;
+  ENDLOOP;
+ENDPROCEDURE;
+
+PROCEDURE OPTIMIZE EBE {argument} SGX1 SGX2 SGY1 SGY2 TILTS {parameters}; { optimizes the Wien-filter's * E-field * }
+                                                            { with spin-tune constant MU0 as target }
+  VARIABLE MU 800; VARIABLE NBAR 800 3; 
+  {optimized variables}
+  VARIABLE E1 1; { optimized value of the EB element's electric field }
+                                                      { magnetic field is ignored # b/c in WIEN R2=R1 }
+  {target}
+  VARIABLE OBJ 1; VARIABLE MU0 1;
+  VARIABLE EB1 1; 
+
+  EB1 := EBE;
+  FIT EB1;
+    LATTICE SGX1 SGX2 SGY1 SGY2 EB1 1 TILTS 0;
+    TSS MU NBAR 0;
+      MU0 := CONS(MU);
+      OBJ := ABS(MU0);
+    WRITE 6 'EBE, MU0 = '&ST(EB1)&', '&ST(MU0);
+    WRITE 6 'OBJ ='&ST(OBJ);
+  ENDFIT 1E-7 1000 1 OBJ;
+
+  EBE := EB1;
+ENDPROCEDURE; {OPTIMIZE (via TSS)}
+
+PROCEDURE PARAMETER_OUTPUT DIR TAG COMMENT SGX1 SGX2 SGY1 SGY2 EBE;
+  OPENF 9292 DIR&'LATTICE-PARAMETERS:'&TAG&'.txt' 'REPLACE';
+    WRITE 9292 '# '&COMMENT;
+    WRITE 9292 '# EB1         SEXT-GX1         SEXT-GY1         SEXT-GX2         SEXT-GY2';
+    WRITE 9292 SF(EBE , '(F15.7)')&SF(SGX1, '(F15.7)')&SF(SGY1, '(F15.7)')&SF(SGX2, '(F15.7)')&SF(SGY2, '(F15.7)');
+  CLOSEF 9292;
+
+ENDPROCEDURE;
+
+PROCEDURE TSS_OUTPUT DIR TAG MU NBAR;
+  VARIABLE I 1;
+  OPENF 8294 DIR&'NU:'&TAG&'.da' 'REPLACE'; WRITE 8294 MU; CLOSEF 8294;
+  LOOP I 1 3;
+    OPENF 8294 DIR&'NBAR'&MRK(I)&':'&TAG&'.da' 'REPLACE';
+    WRITE 8294 NBAR(I);
+    CLOSEF 8294;ENDLOOP;
+ENDPROCEDURE;
+
+PROCEDURE ANALYSIS DIR TAG {output loc} COMMENT SGx1 SGx2 SGy1 SGy2 EBE {lattice pars} TILTS;
+  {TSS}
+  VARIABLE MU 800; VARIABLE NBAR 800 3;
+  {tracking}
+  VARIABLE PNUM 1;
+  VARIABLE PSI0_DEG 1;
+  VARIABLE NTURN 1;
+  
+  NTURN := 300000;
+  PSI0_DEG := 45;
+  PNUM := 10;
+
+  { *** analysis *** }
+  LATTICE SGX1 SGX2 SGY1 SGY2 EBE 1 TILTS 0;
+    {print transfer map}
+     OPENF 636 DIR&'ORBITAL:'&TAG&'.tm' 'REPLACE';
+     PM 636; CLOSEF 636;
+     {print spin transfer map}
+     OPENF 636 DIR&'SPIN:'&TAG&'.tm' 'REPLACE';
+  TSS MU NBAR 0; TSS_OUTPUT DIR TAG MU NBAR;
+  PARAMETER_OUTPUT DIR TAG COMMENT SGx1 SGx2 SGy1 SGy2 EBE;
+  INJECT PNUM PSI0_DEG;
+  WRITE 6 '******************** STARTING TRACKING';
+  OPENF 99 DIR&'PRAY:'&TAG&'.dat' 'REPLACE';
+    PRAY 99; CLOSEF 99;
+  OPENF 772 DIR&'TRPRAY:'&TAG&'.dat' 'REPLACE';
+  OPENF 893 DIR&'TRPSPI:'&TAG&'.dat' 'REPLACE';
+    TRPRAY 772; TRPSPI 893;
+    TR NTURN NINT(NTURN/5000) -1 -3 1.2 1.2 0 0 -12;
+    CLOSEF 772; CLOSEF 893;
+ENDPROCEDURE;
+
+PROCEDURE MAIN;
+  VARIABLE WHERE 100;
+  {lattice parameters}
+  VARIABLE SGx1 1; VARIABLE SGy1 1; {sextupole gradients}
+  VARIABLE SGx2 1; VARIABLE SGy2 1;
+  VARIABLE TILTS 48;
+  {optimization}
+  VARIABLE EBE 1;
+  VARIABLE I 1;
+
+  DIRSET WHERE 'data/16PER/optimize-EB/';
+  GROUTF 'img/dump/TR' 1;
+  
+
+  {optimization}
+  EBE := 130;     { <- target: search for optimum around 130 kV/cm }
+  {spin-coherence-optimized setupole gradients}
+  SGx1 := -.6799259350554631E-002;
+  SGy1 := -.4691403605045742E-001;
+  SGx2 := 0.6869494176206414E-001;
+  
+  OV 3 3 0;
+  DAEPS 1E-12; {DA garbage collection tolerance}
+  SET_FOR_DEUTERONS 1.143914; { SET lattice parameters }
+  TILTS := ZEROS(48);
+  OPENF 100492 WHERE&'TILTS.in' 'REPLACE';
+    LOOP I 1 48; WRITE 100492 0; ENDLOOP;
+    CLOSEF 100492;
+
+  { *** PRE-OPT ANALYSIS *** }
+  ANALYSIS WHERE 'pre-opt' 'lattice parameters prior to optimization (of MU0)' SGx1 SGx2 SGy1 SGy2 EBE TILTS;
+
+  { *** OPTIMIZATION *** }
+  OPTIMIZE EBE {argument} SGX1 SGX2 SGY1 SGY2 {parameters} TILTS;
+  WRITE 6 'USE EBE = '&ST(EBE);
+  
+
+  { *** POST-OPT ANALYSIS *** }
+  ANALYSIS WHERE 'post-opt' 'lattice parameters after to optimization (of MU0)' SGx1 SGx2 SGy1 SGy2 EBE TILTS;
+
+ENDPROCEDURE; {MAIN}
+
+PROCEDURE EBSWEEP FROM TO STEP; { check spin tune at different EBE values with SEXT GRADS FIXED }
+  VARIABLE WHERE 100; VARIABLE MRKR 50; 
+  {lattice parameters}
+  VARIABLE SGx1 1; VARIABLE SGy1 1; {sextupole gradients}
+  VARIABLE SGx2 1; VARIABLE SGy2 1;
+  VARIABLE TILTS 48;
+  {sweep}
+  VARIABLE EBE 1;
+  {TSS}
+  VARIABLE MU 800; VARIABLE NBAR 800 3;
+  {sweep loop}
+  VARIABLE I 1; VARIABLE NCNT 1;
+
+  DIRSET WHERE 'data/BYPASS_SEX_CLEAR/optimize-EB-sweep/rough-mesh/';
+  MRKR := 'CASE_0';
+  GROUTF 'img/dump/TR' 1;
+  {fixed parameters}
+  SGx1 := -.6799259350554631E-002;
+  SGy1 := -.4691403605045742E-001;
+  SGx2 := 0.6869494176206414E-001;
+  TILTS := ZEROS(48); MRKR := 'CASE_0';
+  OPENF 100492 WHERE&'TILTS:'&MRKR&'.in' 'REPLACE';
+    LOOP I 1 48; WRITE 100492 0; ENDLOOP;
+    CLOSEF 100492;
+  {loop parameters}
+  NCNT := (TO-FROM)/STEP + 1;
+  
+  OV 3 3 0;
+  DAEPS 1E-12; { DA garbage collection tolerance }
+  SET_FOR_DEUTERONS 1.143914; { SET lattice parameters }
+  LOOP I 1 NCNT; EBE := FROM + (I-1)*STEP;
+    LATTICE SGX1 SGX2 SGY1 SGY2 EBE 1 TILTS 0;
+    TSS MU NBAR 0; TSS_OUTPUT WHERE MRKR&MRK(I) MU NBAR;
+    PARAMETER_OUTPUT WHERE MRKR&MRK(I) '' SGx1 SGx2 SGy1 SGy2 EBE;
+    ENDLOOP;
+ENDPROCEDURE;
+
+PROCEDURE RUN; MAIN;
+{ EBSWEEP 129 131 .001; }
+ENDPROCEDURE;
+RUN; END;
