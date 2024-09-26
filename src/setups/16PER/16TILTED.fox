@@ -1,4 +1,7 @@
-INCLUDE 'bin/common/16header';
+INCLUDE 'bin/common/header';
+
+FUNCTION fACCLEN DUMMY; fACCLEN := 261; ENDFUNCTION;
+FUNCTION fWFOPTIMUME DUMMY; fWFOPTIMUME := 132.6736940847980; {corr. tune 0.44e-7} ENDFUNCTION;
 
 {
 Optimize WF & sextupole parameters for QFS 1) beta chrom; 2)spin coherence SEPARETLY

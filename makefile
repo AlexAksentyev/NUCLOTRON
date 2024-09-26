@@ -1,7 +1,7 @@
 CORE-DIR= $(HOME)/REPOS/COSYINF-CORE
 CORE = $(addsuffix .bin, cosy utilities elements)
 
-COMMON = $(addsuffix .bin, 8header 16header)
+COMMON = $(addsuffix .bin, header)
 SETUPS = $(addsuffix .bin, 8PER/8TILTED 16PER/16TILTED)
 
 define RM
