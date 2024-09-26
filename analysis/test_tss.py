@@ -22,7 +22,7 @@ case_sign = '*'
 def load_tss(dir):
     cases = [int(re.findall(r'\d+',e)[1]) for e in glob(DATDIR+'ABERRATIONS:CW_'+case_sign)]
     cases.sort()
-    cases=np.arange(20)
+    cases=np.arange(10)
     ncases = len(cases)
     nbar = {}; nu = {}
     n0 = np.zeros(ncases, dtype=list(zip(['X_CW','Y_CW','Z_CW','X_CCW','Y_CCW','Z_CCW','tilt'],[float]*7)));

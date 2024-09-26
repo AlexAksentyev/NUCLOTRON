@@ -119,7 +119,7 @@ def process(case):
 
 if __name__ == '__main__':
     
-    cases = np.arange(5)
+    cases = np.arange(20)
     
     data = np.zeros(len(cases),
                         dtype=list(zip(['a','f','Sa','Sf','mean_tilt','tilt_std','comment'],['float']*6+['object']))
