@@ -67,7 +67,7 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
 
                     {CW lattice}
 
-  LATTICE     SGx1 SGy1 SGx2 SGy2 EB1 1 TILTS 0;  MRKR_LAT:= 'CW';
+  LATTICE     SGx1 SGy1 SGx2 SGy2 EB1 1 TILTS 0;  MRKR_LAT:= 'CW'; WRITE 6 'LATTICE LENGTH: '&ST(SPOS);
   OPENF 9292 WHERE&'LATTICE-PARAMETERS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
     WRITE 9292 'EB1         SEXT-GX1         SEXT-GY1         SEXT-GX2         SEXT-GY2';
     WRITE 9292 SF(EB1 , '(F15.7)')&SF(SGx1, '(F15.7)')&SF(SGy1, '(F15.7)')&SF(SGx2, '(F15.7)')&SF(SGy2, '(F15.7)');
@@ -106,8 +106,8 @@ PROCEDURE RUN;
     CLOSEF 100492;
   TILTLAT TILTS WHERE MRKR;
 
-IF FALSE; {at present stage uninterested in tilted lattice operation}
-  LOOP I 1 20;                                      {tilted cases}
+IF TRUE; {at present stage un/interested in tilted lattice operation}
+  LOOP I 1 200;                                      {tilted cases}
     MRKR := 'CASE_'&MRK(I);
     TILTS := GENTILT(1E-4, 48, WHERE&'TILTS:'&MRKR); {in radians}
     TILTLAT TILTS WHERE MRKR;
