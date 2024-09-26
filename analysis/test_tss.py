@@ -10,7 +10,7 @@ mpl.rcParams['font.size']=14
 
 LATTICE = '8PER'
 
-DATDIR = '../data/'+LATTICE+'/TSS/'
+DATDIR = '../data/'+LATTICE+'/TSS-strict0/'
 
 Fcyc = .5822942764643650e6 # cyclotron frequency [Hz = rev/sec]
 TAU = 1/Fcyc
