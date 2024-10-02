@@ -142,7 +142,7 @@ PROCEDURE EBSWEEP FROM TO STEP; { check spin tune at different EBE values with S
   {sweep loop}
   VARIABLE I 1; VARIABLE NCNT 1;
 
-  DIRSET WHERE 'data/BYPASS_SEX_CLEAR/optimize-EB-sweep/rough-mesh/';
+  DIRSET WHERE 'data/16PER/optimize-EB-sweep/fine-mesh/';
   MRKR := 'CASE_0';
   GROUTF 'img/dump/TR' 1;
   {fixed parameters}
@@ -166,7 +166,9 @@ PROCEDURE EBSWEEP FROM TO STEP; { check spin tune at different EBE values with S
     ENDLOOP;
 ENDPROCEDURE;
 
-PROCEDURE RUN; MAIN;
-{ EBSWEEP 129 131 .001; }
+PROCEDURE RUN;
+{optimum for 16-per EB = 132.6736940}
+{optimum for 8-per  EB = 129.5058060}
+EBSWEEP 132.67371 132.673735 1e-6;
 ENDPROCEDURE;
 RUN; END;
