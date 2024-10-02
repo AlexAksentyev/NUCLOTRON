@@ -1,4 +1,4 @@
-INCLUDE 'bin/setups/16PER/16TILTED';
+INCLUDE 'bin/setups/8PER/8TILTED';
 
 PROCEDURE DATAOUTPUT MRKR_LAT MRKR WHERE;
     VARIABLE MU 800; VARIABLE NBAR 800 3;
@@ -95,7 +95,7 @@ PROCEDURE RUN;
   VARIABLE MRKR 100;
   VARIABLE VAL 1;
 
-  DIRSET WHERE 'data/16PER/TSS-strict0/'; DIRSET_AUTO 1;
+  DIRSET WHERE 'data/COMPARISON/'; DIRSET_AUTO 1;
   GROUTF 'img/dump/TR' 1;
 
   I := 0;                                           {control case: no tilting }
@@ -104,13 +104,14 @@ PROCEDURE RUN;
   OPENF 100492 WHERE&'TILTS:'&MRKR&'.in' 'REPLACE';
     LOOP I 1 48; WRITE 100492 0; ENDLOOP;
     CLOSEF 100492;
-  TILTLAT TILTS WHERE MRKR;
+  TILTLAT TILTS WHERE '8PER-'&MRKR;
 
 IF TRUE; {at present stage un/interested in tilted lattice operation}
-  LOOP I 1 200;                                      {tilted cases}
+  LOOP I 1 50;                                      {tilted cases}
     MRKR := 'CASE_'&MRK(I);
-    TILTS := GENTILT(1E-4, 48, WHERE&'TILTS:'&MRKR); {in radians}
-    TILTLAT TILTS WHERE MRKR;
+    {TILTS := GENTILT(1E-4, 48, WHERE&'TILTS:'&MRKR);} {in radians}
+    TILTS := READTILT(WHERE&'TILTS:'&MRKR);
+    TILTLAT TILTS WHERE '8PER-'&MRKR;
   ENDLOOP;
 ENDIF;
 
