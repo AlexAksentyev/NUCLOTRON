@@ -176,6 +176,9 @@ class NBAR:
             self._dict.update({lbl:DAVEC(folder+'NBAR{:d}:{}.da'.format(i, mrkr))})
         self._mean = np.array([self._dict[e].const for e in ['X','Y','Z']])
         self._norm = np.sqrt(np.sum(self._mean**2))
+
+    def __getitem__(self, key):
+        return self._dict[key]
     @property
     def mean(self):
         return self._mean
