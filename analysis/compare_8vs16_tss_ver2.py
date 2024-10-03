@@ -16,7 +16,7 @@ Fcyc16 = 0.5577531383758286e6
 
 Wcyc = {8: 2*np.pi*Fcyc8, 16: 2*np.pi*Fcyc16}
 
-def load_tss(path, circ_='CW'):
+def load_tss(path):
     cases = glob(path+'ABERRATIONS:*')
     tags = [string.replace(path+'ABERRATIONS:','') for string in cases]
     ncases = len(cases)
