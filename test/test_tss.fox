@@ -1,25 +1,27 @@
-INCLUDE 'bin/setups/8PER/8TILTED';
+INCLUDE 'bin/setups/16PER/16TILTED';
 
 PROCEDURE DATAOUTPUT MRKR_LAT MRKR WHERE;
     VARIABLE MU 800; VARIABLE NBAR 800 3;
     VARIABLE MAPSE 1; VARIABLE I 1;
+
+    OS 'mkdir -p '&WHERE&'service-data/';
     
     {print transfer map}
-      OPENF 636 WHERE&'TrMAP:'&MRKR_LAT&'_'&MRKR 'REPLACE';
+    OPENF 636 WHERE&'TrMAP:'&MRKR_LAT&'_'&MRKR 'REPLACE';
       PM 636; CLOSEF 636;
       {prInt spin transfer map}
-      OPENF 636 WHERE&'SpTrMAP:'&MRKR_LAT&'_'&MRKR 'REPLACE';
+    OPENF 636 WHERE&'SpTrMAP:'&MRKR_LAT&'_'&MRKR 'REPLACE';
       PSM 636; CLOSEF 636;
       {print aberrations}
-      OPENF 636 WHERE&'ABERRATIONS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
+    OPENF 636 WHERE&'service-data/ABERRATIONS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
       PA 636; CLOSEF 636;
       {other stats about the map}
       MAPSE := SE(MAP);
-      OPENF 636 WHERE&'MAP-SYM-ERR:'&MRKR_LAT&'_'&MRKR 'REPLACE';
+    OPENF 636 WHERE&'service-data/MAP-SYM-ERR:'&MRKR_LAT&'_'&MRKR 'REPLACE';
       WRITE 636 MAPSE; CLOSEF 636;
       WRITE 6 'MAP SYMPLECTIFICATION ERROR' MAPSE;
-  TSS MU NBAR 0;
-      OPENF 636 WHERE&'MU:'&MRKR_LAT&'_'&MRKR&'.da' 'REPLACE';
+    TSS MU NBAR 0;
+    OPENF 636 WHERE&'MU:'&MRKR_LAT&'_'&MRKR&'.da' 'REPLACE';
       WRITE 636 MU; CLOSEF 636;
       LOOP I 1 3; OPENF 636 WHERE&'NBAR'&MRK(I)&':'&MRKR_LAT&'_'&MRKR&'.da' 'REPLACE';
       WRITE 636 NBAR(I); CLOSEF 636; ENDLOOP;
@@ -68,7 +70,7 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
                     {CW lattice}
 
   LATTICE     SGx1 SGy1 SGx2 SGy2 EB1 1 TILTS 0;  MRKR_LAT:= 'CW'; WRITE 6 'LATTICE LENGTH: '&ST(SPOS);
-  OPENF 9292 WHERE&'LATTICE-PARAMETERS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
+  OPENF 9292 WHERE&'lattice-descriptions/LATTICE-PARAMETERS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
     WRITE 9292 'EB1         SEXT-GX1         SEXT-GY1         SEXT-GX2         SEXT-GY2';
     WRITE 9292 SF(EB1 , '(F15.7)')&SF(SGx1, '(F15.7)')&SF(SGy1, '(F15.7)')&SF(SGx2, '(F15.7)')&SF(SGy2, '(F15.7)');
   CLOSEF 9292;
@@ -79,7 +81,7 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
                      {CCW lattice}
 
   CCW_LATTICE SGx1 SGy1 SGx2 SGy2 EB1 1 -TILTS 0;  MRKR_LAT:= 'CCW';
-  OPENF 9292 WHERE&'LATTICE-PARAMETERS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
+  OPENF 9292 WHERE&'lattice-descriptions/LATTICE-PARAMETERS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
     WRITE 9292 'EB1         SEXT-GX1         SEXT-GY1         SEXT-GX2         SEXT-GY2';
     WRITE 9292 SF(EB1 , '(F15.7)')&SF(SGx1, '(F15.7)')&SF(SGy1, '(F15.7)')&SF(SGx2, '(F15.7)')&SF(SGy2, '(F15.7)');
   CLOSEF 9292;
@@ -88,12 +90,49 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
 
 ENDPROCEDURE; {TILTLAT}
 
-PROCEDURE RUN;
+PROCEDURE GENERAL_TEST;
   VARIABLE WHERE 100;
   VARIABLE TILTS 48;
   VARIABLE I 1;
   VARIABLE MRKR 100;
   VARIABLE VAL 1;
+
+  WRITE 6 '++++++++++++++++++++++++++++++++++++++++++++++++++';
+  WRITE 6 '                   GENERAL TEST                   ';
+  WRITE 6 '--------------------------------------------------';
+
+  DIRSET WHERE 'data/16PER/tilted-unzeroed-comparison/'; DIRSET_AUTO 1;
+  GROUTF 'img/dump/TR' 1;
+  OS 'mkdir -p '&WHERE&'lattice-descriptions/';
+
+  I := 0;                                           {control case: no tilting }
+  MRKR := 'CASE_'&MRK(I);
+  TILTS := ZEROS(48); 
+  OPENF 100492 WHERE&'TILTS:'&MRKR&'.in' 'REPLACE';
+    LOOP I 1 48; WRITE 100492 0; ENDLOOP;
+    CLOSEF 100492;
+  TILTLAT TILTS WHERE MRKR;
+
+IF TRUE;
+  LOOP I 1 50;                                      {tilted cases}
+    MRKR := 'CASE_'&MRK(I);
+    TILTS := VEGAUSS((I-1)*1E-6, 1E-4, 48, WHERE&'TILTS:'&MRKR); {in radians}
+    TILTLAT TILTS WHERE MRKR;
+  ENDLOOP;
+ENDIF;
+
+ENDPROCEDURE; {RUN FOR COMPARISON 8 VS 16 PERIODIC LATTICES}
+
+PROCEDURE FOR_COMPARISON;
+  VARIABLE WHERE 100;
+  VARIABLE TILTS 48;
+  VARIABLE I 1;
+  VARIABLE MRKR 100;
+  VARIABLE VAL 1;
+
+  WRITE 6 '++++++++++++++++++++++++++++++++++++++++++++++++++';
+  WRITE 6 '                  FOR COMPARISON                  ';
+  WRITE 6 '--------------------------------------------------';
 
   DIRSET WHERE 'data/COMPARISON/'; DIRSET_AUTO 1;
   GROUTF 'img/dump/TR' 1;
@@ -115,6 +154,22 @@ IF TRUE; {at present stage un/interested in tilted lattice operation}
   ENDLOOP;
 ENDIF;
 
-ENDPROCEDURE; {RUN}
+ENDPROCEDURE; {RUN FOR COMPARISON 8 VS 16 PERIODIC LATTICES}
 
-RUN; END;
+PROCEDURE FOR_CALIBRATION;
+  VARIABLE WHERE 100; VARIABLE MRKR 100;
+  VARIABLE TILTS 48;
+
+  WRITE 6 '++++++++++++++++++++++++++++++++++++++++++++++++++';
+  WRITE 6 '                 FOR CALIBRATION                  ';
+  WRITE 6 '--------------------------------------------------';
+
+  DIRSET WHERE 'data/8PER/TRACKING-strict0/1-order-expansion/';
+  MRKR := 'CASE_1';
+
+  TILTS := READTILT('data/8PER/TRACKING-strict0/TILTS:'&MRKR);
+  TILTLAT TILTS WHERE MRKR;
+
+ENDPROCEDURE; {RUN FOR INVESTIGATION INTO BEAM CALIBRATION}
+
+GENERAL_TEST; END;

@@ -8,21 +8,21 @@ import re
 
 mpl.rcParams['font.size']=14
 
-LATTICE = '8PER'
+LATTICE = '16PER'
 
-DATDIR = '../data/'+LATTICE+'/TSS/'
+DATDIR = '../data/'+LATTICE+'/tilted-unzeroed-comparison/'
 
-Fcyc = .5822942764643650e6 # cyclotron frequency [Hz = rev/sec]
-TAU = 1/Fcyc
-Wcyc = 2*np.pi*Fcyc
+LEN_8 = 250.047
+Fcyc8 = .5822942764643650e6 # cyclotron frequency [Hz = rev/sec]
 
-mrkr_form = lambda n: 'CASE_{:d}'.format(n)
-case_sign = '*'
+LEN_16 = 261.760
+Fcyc16 = 0.5577531383758286e6
+
+Wcyc_dict = {8: 2*np.pi*Fcyc8, 16: 2*np.pi*Fcyc16}
 
 def load_tss(dir):
-    cases = [int(re.findall(r'\d+',e)[1]) for e in glob(dir+'ABERRATIONS:CW_'+case_sign)]
+    cases = [int(re.findall(r'\d+',e)[1]) for e in glob(dir+'MU:CW_*')]
     cases.sort()
-    cases=np.arange(51)
     ncases = len(cases)
     nbar = {}; nu = {}
     n0 = np.zeros(ncases, dtype=list(zip(['X_CW','Y_CW','Z_CW','X_CCW','Y_CCW','Z_CCW','tilt'],[float]*7)));
@@ -32,17 +32,18 @@ def load_tss(dir):
         print(case)
         tmp = []
         for dn in ['CW','CCW']:
-            nbar.update({str(case)+dn: NBAR(dir, dn+'_'+mrkr_form(case))})
-            nu.update({str(case)+dn: DAVEC(dir+'MU:'+dn+'_'+mrkr_form(case)+'.da')})
-            tmp += [nbar[str(case)+dn].mean[e] for e in range(3)]
+            nbar.update({dn+str(case): NBAR(dir, '{}_CASE_{}'.format(dn, case))})
+            nu.update({dn+str(case): DAVEC(dir+'MU:{}_CASE_{}'.format(dn, case)+'.da')})
+            tmp += [nbar[dn+str(case)].mean[e] for e in range(3)]
             
-        tilts[i] = np.loadtxt(dir+'TILTS:'+mrkr_form(case)+'.in')
+        tilts[i] = np.loadtxt(dir+'TILTS:CASE_{}'.format(case)+'.in')
         n0[i] = tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tilts[i].mean()
-        nu0[i] = nu[str(case)+'CW'].const, nu[str(case)+'CCW'].const
+        nu0[i] = nu['CW'+str(case)].const, nu['CCW'+str(case)].const
     return nu, nbar, nu0, n0, tilts
 
 
 if __name__ == '__main__':
+    Wcyc = Wcyc_dict[int(LATTICE.replace('PER',''))]
     
     nu, nbar, nu0, n0, tilts = load_tss(DATDIR)
     Wx = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
