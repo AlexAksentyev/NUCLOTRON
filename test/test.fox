@@ -4,7 +4,7 @@ PROCEDURE INJECT NUM PSI_DEG; {at injection: SX = 0, SY, SZ = sin PSI, cos PSI}
   VARIABLE X 100; VARIABLE I 1;
   VARIABLE PSI 1; VARIABLE SY 1; VARIABLE SZ 1;
   PSI := DEG2RAD(PSI_DEG); {PSI IN RADIANS}
-  X := LINSPACE(-1E-3, 1E-3, NUM);
+  X := LINSPACE(1E-4, 1.5E-3, NUM);
   SY := SIN(PSI); SZ := COS(PSI);
   SR 0 0 0 0 0 0 0 0 1; SSR 0 SY SZ;
   LOOP I 1 NUM;
@@ -21,7 +21,6 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
   VARIABLE SGX2 1; VARIABLE SGY2 1;
   VARIABLE EB1 1; {Wien-filter E-field (optimum)}
   VARIABLE MU 800; VARIABLE NBAR 800 3;
-  VARIABLE MU 800; VARIABLE NBAR 800 3;
   VARIABLE MU_N_ARR 5000 1000;
   VARIABLE NTURN 1; VARIABLE NPDAT 1;
   VARIABLE PSI0_DEG 1;
@@ -30,13 +29,13 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
 
   WRITE 6 'MARKER:                                                       '&MRKR;
   
-  NTURN := 300000; NPDAT := 5000;
+  NTURN := 30000000; NPDAT := 5000;
   PSI0_DEG := 0;
-  PNUM := 10;
+  PNUM := 8;
 
   {WIEN FILTER}
   {spin tune ~ 10^-7}
-  EB1 := 129.5058235952117; {3.27*2}
+  EB1 := fWFOPTIMUME(1); {3.27*2}
 
   {SEXTUPOLES}
     {natural chromaticity}
@@ -117,6 +116,7 @@ PROCEDURE RUN;
   DIRSET WHERE 'data/8PER/TRACKING-strict0/'; DIRSET_AUTO 1;
   GROUTF 'img/dump/TR' 1;
 
+IF LO(0);
   I := 0;                                           {control case: no tilting }
   MRKR := 'CASE_'&MRK(I);
   TILTS := ZEROS(48); 
@@ -124,14 +124,19 @@ PROCEDURE RUN;
     LOOP I 1 48; WRITE 100492 0; ENDLOOP;
     CLOSEF 100492;
   TILTLAT TILTS WHERE MRKR;
+ENDIF;
 
-IF FALSE;  {at present stage uninterested in tilted lattice operation}
-  LOOP I 1 100;                                      {tilted cases}
+IF LO(0);  {at present stage uninterested in tilted lattice operation}
+  LOOP I 1 1;                                      {tilted cases}
     MRKR := 'CASE_'&MRK(I);
     TILTS := GENTILT(1E-4, 48, WHERE&'TILTS:'&MRKR); {in radians}
     TILTLAT TILTS WHERE MRKR;
   ENDLOOP;
 ENDIF;
+
+  MRKR := 'CASE_1-RANGE_2';
+  TILTS := READTILT(WHERE&'TILTS:CASE_1');
+  TILTLAT TILTS WHERE MRKR;
 
 ENDPROCEDURE; {RUN}
 
