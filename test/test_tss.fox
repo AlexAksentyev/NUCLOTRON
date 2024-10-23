@@ -1,4 +1,4 @@
-INCLUDE 'bin/setups/16PER/16TILTED';
+INCLUDE 'bin/setups/16PER/16TILTEDv2';
 
 PROCEDURE DATAOUTPUT MRKR_LAT MRKR WHERE;
     VARIABLE MU 800; VARIABLE NBAR 800 3;
@@ -28,7 +28,7 @@ PROCEDURE DATAOUTPUT MRKR_LAT MRKR WHERE;
 
 ENDPROCEDURE;
 
-PROCEDURE TILTLAT TILTS WHERE MRKR;
+PROCEDURE TILTLAT TILTS_BEND TILTS_WF WHERE MRKR;
   
   {lattice parameters}
   VARIABLE SGX1 1; VARIABLE SGY1 1; {sextupole gradients}
@@ -69,7 +69,7 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
 
                     {CW lattice}
 
-  LATTICE     SGx1 SGy1 SGx2 SGy2 EB1 1 TILTS 0;  MRKR_LAT:= 'CW'; WRITE 6 'LATTICE LENGTH: '&ST(SPOS);
+  LATTICE     SGx1 SGy1 SGx2 SGy2 EB1 1 TILTS_BEND TILTS_WF;  MRKR_LAT:= 'CW'; WRITE 6 'LATTICE LENGTH: '&ST(SPOS);
   OPENF 9292 WHERE&'lattice-descriptions/LATTICE-PARAMETERS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
     WRITE 9292 'EB1         SEXT-GX1         SEXT-GY1         SEXT-GX2         SEXT-GY2';
     WRITE 9292 SF(EB1 , '(F15.7)')&SF(SGx1, '(F15.7)')&SF(SGy1, '(F15.7)')&SF(SGx2, '(F15.7)')&SF(SGy2, '(F15.7)');
@@ -80,7 +80,7 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
 
                      {CCW lattice}
 
-  CCW_LATTICE SGx1 SGy1 SGx2 SGy2 EB1 1 -TILTS 0;  MRKR_LAT:= 'CCW';
+  CCW_LATTICE SGx1 SGy1 SGx2 SGy2 EB1 1 -TILTS_BEND -TILTS_WF;  MRKR_LAT:= 'CCW';
   OPENF 9292 WHERE&'lattice-descriptions/LATTICE-PARAMETERS:'&MRKR_LAT&'_'&MRKR 'REPLACE';
     WRITE 9292 'EB1         SEXT-GX1         SEXT-GY1         SEXT-GX2         SEXT-GY2';
     WRITE 9292 SF(EB1 , '(F15.7)')&SF(SGx1, '(F15.7)')&SF(SGy1, '(F15.7)')&SF(SGx2, '(F15.7)')&SF(SGy2, '(F15.7)');
@@ -91,85 +91,60 @@ PROCEDURE TILTLAT TILTS WHERE MRKR;
 ENDPROCEDURE; {TILTLAT}
 
 PROCEDURE GENERAL_TEST;
-  VARIABLE WHERE 100;
-  VARIABLE TILTS 48;
-  VARIABLE I 1;
-  VARIABLE MRKR 100;
-  VARIABLE VAL 1;
+  VARIABLE LATNAME 10;    VARIABLE TESTNAME 100;
+  VARIABLE OUTDIR 100;    VARIABLE SRCDIR 100;   
+  VARIABLE TILTS_BEND 48; VARIABLE TILTS_WF 32;
+  VARIABLE I 1;           VARIABLE CASEMRKR 100;
 
   WRITE 6 '++++++++++++++++++++++++++++++++++++++++++++++++++';
   WRITE 6 '                   GENERAL TEST                   ';
   WRITE 6 '--------------------------------------------------';
 
-  DIRSET WHERE 'data/16PER/tilted-zeroed-comparison/'; DIRSET_AUTO 1;
+  LATNAME := '16PER';
+  TESTNAME := 'ideal';
+  
+  DIRSET OUTDIR 'data/'&LATNAME&'/'&TESTNAME&'/third-order/'; DIRSET_AUTO 1;
+  SRCDIR := 'data/'&LATNAME&'/TILTS-source/';
   GROUTF 'img/dump/TR' 1;
-  OS 'mkdir -p '&WHERE&'lattice-descriptions/';
+  OS 'mkdir -p '&OUTDIR&'lattice-descriptions/';
 
   I := 0;                                           {control case: no tilting }
-  MRKR := 'CASE_'&MRK(I);
-  TILTS := ZEROS(48); 
-  OPENF 100492 WHERE&'TILTS:'&MRKR&'.in' 'REPLACE';
-    LOOP I 1 48; WRITE 100492 0; ENDLOOP;
-    CLOSEF 100492;
-  TILTLAT TILTS WHERE MRKR;
+  CASEMRKR := 'CASE_'&MRK(I);
+  TILTS_BEND := READTILT(SRCDIR&'TILTSb:'&CASEMRKR);
+  TILTS_WF := READTILT(SRCDIR&'TILTSwf:'&CASEMRKR);
+  TILTLAT TILTS_BEND TILTS_WF OUTDIR CASEMRKR;
 
-IF TRUE;
+IF FALSE;
   LOOP I 1 50;                                      {tilted cases}
-    MRKR := 'CASE_'&MRK(I);
-    { TILTS := VEGAUSS((I-1)*1E-6, 1E-4, 48, WHERE&'TILTS:'&MRKR); } {in radians}
-    TILTS := GENTILT(1E-4, 48, WHERE&'TILTS:'&MRKR);
-    TILTLAT TILTS WHERE MRKR;
-  ENDLOOP;
-ENDIF;
-
-ENDPROCEDURE; {RUN FOR COMPARISON 8 VS 16 PERIODIC LATTICES}
-
-PROCEDURE FOR_COMPARISON;
-  VARIABLE WHERE 100;
-  VARIABLE TILTS 48;
-  VARIABLE I 1;
-  VARIABLE MRKR 100;
-  VARIABLE VAL 1;
-
-  WRITE 6 '++++++++++++++++++++++++++++++++++++++++++++++++++';
-  WRITE 6 '                  FOR COMPARISON                  ';
-  WRITE 6 '--------------------------------------------------';
-
-  DIRSET WHERE 'data/COMPARISON/'; DIRSET_AUTO 1;
-  GROUTF 'img/dump/TR' 1;
-
-  I := 0;                                           {control case: no tilting }
-  MRKR := 'CASE_'&MRK(I);
-  TILTS := ZEROS(48); 
-  OPENF 100492 WHERE&'TILTS:'&MRKR&'.in' 'REPLACE';
-    LOOP I 1 48; WRITE 100492 0; ENDLOOP;
-    CLOSEF 100492;
-  TILTLAT TILTS WHERE '8PER-'&MRKR;
-
-IF TRUE; {at present stage un/interested in tilted lattice operation}
-  LOOP I 1 50;                                      {tilted cases}
-    MRKR := 'CASE_'&MRK(I);
-    {TILTS := GENTILT(1E-4, 48, WHERE&'TILTS:'&MRKR);} {in radians}
-    TILTS := READTILT(WHERE&'TILTS:'&MRKR);
-    TILTLAT TILTS WHERE '8PER-'&MRKR;
+    CASEMRKR := 'CASE_'&MRK(I);
+    { TILTS_BEND := READTILT(SRCDIR&'TILTSb:'&CASEMRKR); }
+    TILTS_WF := READTILT(SRCDIR&'TILTSwf:'&CASEMRKR);
+    { TILTS_WF := VEGAUSS(I*1e-6, 1e-4, 32, OUTDIR&'TILTSwf:'&CASEMRKR); }
+    TILTLAT TILTS_BEND TILTS_WF OUTDIR CASEMRKR;
   ENDLOOP;
 ENDIF;
 
 ENDPROCEDURE; {RUN FOR COMPARISON 8 VS 16 PERIODIC LATTICES}
 
 PROCEDURE FOR_CALIBRATION;
-  VARIABLE WHERE 100; VARIABLE MRKR 100;
-  VARIABLE TILTS 48;
+  VARIABLE LATNAME 10;
+  VARIABLE OUTDIR 100;    VARIABLE SRCDIR 100;    VARIABLE CASEMRKR 100;
+  VARIABLE TILTS_BEND 48; VARIABLE TILTS_WF 16;
 
   WRITE 6 '++++++++++++++++++++++++++++++++++++++++++++++++++';
   WRITE 6 '                 FOR CALIBRATION                  ';
   WRITE 6 '--------------------------------------------------';
 
-  DIRSET WHERE 'data/8PER/TRACKING-strict0/1-order-expansion/';
-  MRKR := 'CASE_1';
+  LATNAME := '8PER';
 
-  TILTS := READTILT('data/8PER/TRACKING-strict0/TILTS:'&MRKR);
-  TILTLAT TILTS WHERE MRKR;
+  DIRSET OUTDIR 'data/'&LATNAME&'/calibration-phase0/tss/3-order-expansion/';
+  SRCDIR := 'data/'&LATNAME&'/TILTS-source/';
+  CASEMRKR := 'CASE_1';
+
+  TILTS_BEND :=  READTILT(SRCDIR&'TILTSb:CASE_0'); {no tilting @ case_0}
+  TILTS_WF := READTILT(SRCDIR&'TILTSwf:'&CASEMRKR);
+  
+  TILTLAT TILTS_BEND TILTS_WF OUTDIR CASEMRKR;
 
 ENDPROCEDURE; {RUN FOR INVESTIGATION INTO BEAM CALIBRATION}
 

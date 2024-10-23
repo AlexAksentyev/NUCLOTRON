@@ -8,9 +8,10 @@ import re
 
 mpl.rcParams['font.size']=14
 
-LATTICE = '16PER'
+LATNAME = '8PER'
+TESTNAME = 'tilted-zeroed-comparison'
 
-DATDIR = '../data/'+LATTICE+'/tilted-unzeroed-comparison/'
+DATDIR = '../data/{}/{}/'.format(LATNAME, TESTNAME)
 
 LEN_8 = 250.047
 Fcyc8 = .5822942764643650e6 # cyclotron frequency [Hz = rev/sec]
@@ -19,31 +20,38 @@ LEN_16 = 261.760
 Fcyc16 = 0.5577531383758286e6
 
 Wcyc_dict = {8: 2*np.pi*Fcyc8, 16: 2*np.pi*Fcyc16}
+wf_num_dict = {'8PER':16, '16PER':32}
 
-def load_tss(dir):
-    cases = [int(re.findall(r'\d+',e)[1]) for e in glob(dir+'MU:CW_*')]
+def load_tss(datdir, tltdir=None):
+    latname, testname = datdir.split('/')[2:4]
+    cases = [int(re.findall(r'\d+',e)[1]) for e in glob(datdir+'MU:CW_*')]
     cases.sort()
     ncases = len(cases)
     nbar = {}; nu = {}
-    n0 = np.zeros(ncases, dtype=list(zip(['X_CW','Y_CW','Z_CW','X_CCW','Y_CCW','Z_CCW','tilt'],[float]*7)));
+    n0 = np.zeros(ncases, dtype=list(zip(['X_CW','Y_CW','Z_CW','X_CCW','Y_CCW','Z_CCW','tilt_wf'],[float]*7)));
     nu0 = np.zeros(ncases, dtype=list(zip(['CW','CCW'],[float]*2)))
-    tilts = np.zeros((ncases, 48))
+    tilts_b = np.zeros((ncases, 48))
+    tilts_wf = np.zeros((ncases, wf_num_dict[latname]))
+    if tltdir!=None:
+        testname = tltdir
+    tltdir = '../data/{}/{}/'.format(latname, testname)
     for i, case in enumerate(cases):
         print(case)
         tmp = []
         for dn in ['CW','CCW']:
-            nbar.update({dn+str(case): NBAR(dir, '{}_CASE_{}'.format(dn, case))})
-            nu.update({dn+str(case): DAVEC(dir+'MU:{}_CASE_{}'.format(dn, case)+'.da')})
+            nbar.update({dn+str(case): NBAR(datdir, '{}_CASE_{}'.format(dn, case))})
+            nu.update({dn+str(case): DAVEC(datdir+'MU:{}_CASE_{}'.format(dn, case)+'.da')})
             tmp += [nbar[dn+str(case)].mean[e] for e in range(3)]
             
-        tilts[i] = np.loadtxt(dir+'TILTS:CASE_{}'.format(case)+'.in')
-        n0[i] = tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tilts[i].mean()
+        tilts_b[i] = np.zeros(48) #np.loadtxt(tltdir+'TILTSb:CASE_{}'.format(case)+'.in')
+        tilts_wf[i] = np.loadtxt(tltdir+'TILTSwf:CASE_{}'.format(case)+'.in')
+        n0[i] = tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tilts_wf[i].mean()
         nu0[i] = nu['CW'+str(case)].const, nu['CCW'+str(case)].const
-    return nu, nbar, nu0, n0, tilts
+    return nu, nbar, nu0, n0, (tilts_b, tilts_wf)
 
-def process(dir):
-    Wcyc = Wcyc_dict[int(dir.split('/')[2].replace('PER',''))]
-    nu, nbar, nu0, n0, tilts = load_tss(dir)
+def process(datdir, tltdir='TILTS-source'):
+    Wcyc = Wcyc_dict[int(datdir.split('/')[2].replace('PER',''))]
+    nu, nbar, nu0, n0, tilts = load_tss(datdir, tltdir)
     Wx = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
     Wy = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
     Wz = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
@@ -86,21 +94,31 @@ if __name__ == '__main__':
     
     
     W, tilts = process(DATDIR)
-    mean_tilt = tilts.mean(axis=1)
+    mean_tilt = tilts[1].mean(axis=1) # tlits[0] = tilts_bend, tlits[1] = tilits_wf
 
-    fig,ax = plt.subplots(3,1,sharex=True)
-    ax[0].set_title(LATTICE)
+    fig,ax = plt.subplots(3,2)
+    ax[0,0].set_title(LATNAME+' (only WF spin-kicks)')
+    # col 0
     for lab in ('CW','CCW'):
-        ax[0].plot(mean_tilt, W['X'][lab],'.', label=lab)
-        ax[1].plot(mean_tilt, W['Y'][lab],'.', label=lab)
-        ax[2].plot(mean_tilt, W['Z'][lab],'.', label=lab)
-    ax[2].set_xlabel(r'$\langle\theta_{tilt}\rangle$')
-    ax[0].set_ylabel(r'$\Omega_x$ [rad/s]')
-    ax[1].set_ylabel(r'$\Omega_y$ [rad/s]')
-    ax[2].set_ylabel(r'$\Omega_z$ [rad/s]')
+        ax[0,0].plot(mean_tilt, W['X'][lab],'.', label=lab)
+        ax[1,0].plot(mean_tilt, W['Y'][lab],'.', label=lab)
+        ax[2,0].plot(mean_tilt, W['Z'][lab],'.', label=lab)
+    ax[2,0].set_xlabel(r'$\langle\theta_{kick}\rangle$')
+    ax[0,0].set_ylabel(r'$\Omega_x$ [rad/s]')
+    ax[1,0].set_ylabel(r'$\Omega_y$ [rad/s]')
+    ax[2,0].set_ylabel(r'$\Omega_z$ [rad/s]')
+    # col 1
+    ax[0,1].plot(mean_tilt, np.abs(W['X']['CW'])-np.abs(W['X']['CCW']),  '.')
+    ax[1,1].plot(mean_tilt, W['Y']['CW']-W['Y']['CCW'],                  '.')
+    ax[2,1].plot(W['Y']['CW']-W['Y']['CCW'], W['X']['CW']+W['X']['CCW'], '.')
+    ax[0,1].set_ylabel(r'$\Delta |W_x|$')
+    ax[1,1].set_xlabel(r'$\langle\theta_{kick}\rangle$'); ax[1,1].set_ylabel(r'$\Delta W_y$')
+    ax[2,1].set_xlabel(r'$\Delta W_y$ [rad/s]');          ax[2,1].set_ylabel(r'$\Sigma W_x$')
+    # niceties
     for i in range(3):
-        ax[i].grid()
-        ax[i].legend()
-        ax[i].ticklabel_format(style='sci',scilimits=(0,0),useMathText=True,axis='both')
+        for j in range(2):
+            ax[i,j].grid()
+            ax[i,j].ticklabel_format(style='sci',scilimits=(0,0),useMathText=True,axis='both')
+        ax[i,0].legend()
     
    
