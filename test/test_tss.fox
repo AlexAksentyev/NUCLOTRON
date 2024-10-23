@@ -101,10 +101,10 @@ PROCEDURE GENERAL_TEST;
   WRITE 6 '--------------------------------------------------';
 
   LATNAME := '16PER';
-  TESTNAME := 'ideal';
+  TESTNAME := 'zeroed';
   
-  DIRSET OUTDIR 'data/'&LATNAME&'/'&TESTNAME&'/third-order/'; DIRSET_AUTO 1;
-  SRCDIR := 'data/'&LATNAME&'/TILTS-source/';
+  DIRSET OUTDIR 'data/'&LATNAME&'/'&TESTNAME&'/tss/'; DIRSET_AUTO 1;
+  SRCDIR :=     'data/'&LATNAME&'/'&TESTNAME&'/TILTS-source/';
   GROUTF 'img/dump/TR' 1;
   OS 'mkdir -p '&OUTDIR&'lattice-descriptions/';
 
@@ -138,7 +138,7 @@ PROCEDURE FOR_CALIBRATION;
   LATNAME := '8PER';
 
   DIRSET OUTDIR 'data/'&LATNAME&'/calibration-phase0/tss/3-order-expansion/';
-  SRCDIR := 'data/'&LATNAME&'/TILTS-source/';
+  SRCDIR := 'data/'&LATNAME&'/zeroed/TILTS-source/';
   CASEMRKR := 'CASE_1';
 
   TILTS_BEND :=  READTILT(SRCDIR&'TILTSb:CASE_0'); {no tilting @ case_0}

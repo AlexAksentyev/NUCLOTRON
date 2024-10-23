@@ -8,10 +8,10 @@ import re
 
 mpl.rcParams['font.size']=14
 
-LATNAME = '8PER'
-TESTNAME = 'tilted-zeroed-comparison'
+LATNAME = '16PER'
+TESTNAME = 'unzeroed'
 
-DATDIR = '../data/{}/{}/'.format(LATNAME, TESTNAME)
+DATDIR = '../data/{}/{}/tss/'.format(LATNAME, TESTNAME)
 
 LEN_8 = 250.047
 Fcyc8 = .5822942764643650e6 # cyclotron frequency [Hz = rev/sec]
@@ -22,7 +22,7 @@ Fcyc16 = 0.5577531383758286e6
 Wcyc_dict = {8: 2*np.pi*Fcyc8, 16: 2*np.pi*Fcyc16}
 wf_num_dict = {'8PER':16, '16PER':32}
 
-def load_tss(datdir, tltdir=None):
+def load_tss(datdir):
     latname, testname = datdir.split('/')[2:4]
     cases = [int(re.findall(r'\d+',e)[1]) for e in glob(datdir+'MU:CW_*')]
     cases.sort()
@@ -32,9 +32,7 @@ def load_tss(datdir, tltdir=None):
     nu0 = np.zeros(ncases, dtype=list(zip(['CW','CCW'],[float]*2)))
     tilts_b = np.zeros((ncases, 48))
     tilts_wf = np.zeros((ncases, wf_num_dict[latname]))
-    if tltdir!=None:
-        testname = tltdir
-    tltdir = '../data/{}/{}/'.format(latname, testname)
+    tltdir = '../data/{}/{}/TILTS-source/'.format(latname, testname)
     for i, case in enumerate(cases):
         print(case)
         tmp = []
@@ -49,9 +47,9 @@ def load_tss(datdir, tltdir=None):
         nu0[i] = nu['CW'+str(case)].const, nu['CCW'+str(case)].const
     return nu, nbar, nu0, n0, (tilts_b, tilts_wf)
 
-def process(datdir, tltdir='TILTS-source'):
+def process(datdir):
     Wcyc = Wcyc_dict[int(datdir.split('/')[2].replace('PER',''))]
-    nu, nbar, nu0, n0, tilts = load_tss(datdir, tltdir)
+    nu, nbar, nu0, n0, tilts = load_tss(datdir)
     Wx = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
     Wy = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
     Wz = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
@@ -98,6 +96,7 @@ if __name__ == '__main__':
 
     fig,ax = plt.subplots(3,2)
     ax[0,0].set_title(LATNAME+' (only WF spin-kicks)')
+    ax[0,1].set_title(TESTNAME)
     # col 0
     for lab in ('CW','CCW'):
         ax[0,0].plot(mean_tilt, W['X'][lab],'.', label=lab)
