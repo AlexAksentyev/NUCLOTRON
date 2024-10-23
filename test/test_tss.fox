@@ -101,7 +101,7 @@ PROCEDURE GENERAL_TEST;
   WRITE 6 '                   GENERAL TEST                   ';
   WRITE 6 '--------------------------------------------------';
 
-  DIRSET WHERE 'data/16PER/tilted-unzeroed-comparison/'; DIRSET_AUTO 1;
+  DIRSET WHERE 'data/16PER/tilted-zeroed-comparison/'; DIRSET_AUTO 1;
   GROUTF 'img/dump/TR' 1;
   OS 'mkdir -p '&WHERE&'lattice-descriptions/';
 
@@ -116,7 +116,8 @@ PROCEDURE GENERAL_TEST;
 IF TRUE;
   LOOP I 1 50;                                      {tilted cases}
     MRKR := 'CASE_'&MRK(I);
-    TILTS := VEGAUSS((I-1)*1E-6, 1E-4, 48, WHERE&'TILTS:'&MRKR); {in radians}
+    { TILTS := VEGAUSS((I-1)*1E-6, 1E-4, 48, WHERE&'TILTS:'&MRKR); } {in radians}
+    TILTS := GENTILT(1E-4, 48, WHERE&'TILTS:'&MRKR);
     TILTLAT TILTS WHERE MRKR;
   ENDLOOP;
 ENDIF;

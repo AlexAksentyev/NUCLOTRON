@@ -41,29 +41,59 @@ def load_tss(dir):
         nu0[i] = nu['CW'+str(case)].const, nu['CCW'+str(case)].const
     return nu, nbar, nu0, n0, tilts
 
-
-if __name__ == '__main__':
-    Wcyc = Wcyc_dict[int(LATTICE.replace('PER',''))]
-    
-    nu, nbar, nu0, n0, tilts = load_tss(DATDIR)
+def process(dir):
+    Wcyc = Wcyc_dict[int(dir.split('/')[2].replace('PER',''))]
+    nu, nbar, nu0, n0, tilts = load_tss(dir)
     Wx = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
     Wy = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
     Wz = np.zeros(len(nu0), dtype=list(zip(['CW','CCW'],[float]*2)))
     Wx['CW'], Wx['CCW'] = [Wcyc*nu0[lab]*n0['X_'+lab] for lab in ('CW','CCW')]
     Wy['CW'], Wy['CCW'] = [Wcyc*nu0[lab]*n0['Y_'+lab] for lab in ('CW','CCW')]
     Wz['CW'], Wz['CCW'] = [Wcyc*nu0[lab]*n0['Z_'+lab] for lab in ('CW','CCW')]
-    n00_CW, n00_CCW = [np.array((n0[0]['X_'+lab], n0[0]['Y_'+lab], n0[0]['Z_'+lab])) for lab in ('CW','CCW')]
-    W0_CW, W0_CCW = Wcyc*nu0[0]['CW']*n00_CW, Wcyc*nu0[0]['CCW']*n00_CCW
+    W_dict = {'X': Wx, 'Y': Wy, 'Z': Wz}
+    return W_dict, tilts
+
+def compare8vs16(place):
+    W8, tilts8 = process('../data/8PER/{}/'.format(place))
+    std8 = tilts8.std(axis=1)
+    W16, tilts16 = process('../data/16PER/{}/'.format(place))
+    std16 = tilts16.std(axis=1)
+    fig, ax = plt.subplots(1,1)
+    DWY8 = W8['Y']['CW'] - W8['Y']['CCW']
+    SWX8 = W8['X']['CW'] + W8['X']['CCW']
+    DWY16 = W16['Y']['CW'] - W16['Y']['CCW']
+    SWX16 = W16['X']['CW'] + W16['X']['CCW']
+    ax.plot(DWY8, SWX8, '.', label='8')
+    ax.plot(DWY16, SWX16, '.', label='16')
+    ax.set_xlabel(r'$\Delta W_y$'); ax.set_ylabel(r'$\Sigma W_x$')
+    ax.legend(); ax.grid(); ax.ticklabel_format(style='sci',scilimits=(0,0),useMathText=True,axis='both')
+    fig2, ax2 = plt.subplots(2,1,sharex=True)
+    ax2[0].set_title('8 vs 16 comparison')
+    ax2[0].plot(W8['X']['CW'], W8['Z']['CW'], '.', label='8')
+    ax2[0].plot(W16['X']['CW'], W16['Z']['CW'], '.', label='16')
+    ax2[0].set_ylabel(r'$W_z$')
+    ax2[1].set_title('CW vs CCW comparison (for 8-periodic)')
+    ax2[1].plot(W8['X']['CW'], W8['Z']['CW'], '.', label='CW')
+    ax2[1].plot(W8['X']['CCW'], W8['Z']['CCW'], '.', label='CCW')
+    ax2[1].set_xlabel(r'$W_x$'); ax2[1].set_ylabel(r'$W_z$')
+    for i in range(2):
+        ax2[i].legend(); ax2[i].grid(); ax2[i].ticklabel_format(style='sci',scilimits=(0,0),useMathText=True,axis='both')
+    fig3, ax3 = plt.subplots(1,1)
+    ax3.plot(W8['Y']['CW'], W8['X']['CW'],'.')
+
+
+if __name__ == '__main__':
+    
+    
+    W, tilts = process(DATDIR)
     mean_tilt = tilts.mean(axis=1)
-    DeltaCW = Wx['CW']-Wx['CW'][0]
-    DeltaCCW = Wx['CCW']-Wx['CCW'][0]
 
     fig,ax = plt.subplots(3,1,sharex=True)
     ax[0].set_title(LATTICE)
     for lab in ('CW','CCW'):
-        ax[0].plot(mean_tilt, Wx[lab],'.', label=lab)
-        ax[1].plot(mean_tilt, Wy[lab],'.', label=lab)
-        ax[2].plot(mean_tilt, Wz[lab],'.', label=lab)
+        ax[0].plot(mean_tilt, W['X'][lab],'.', label=lab)
+        ax[1].plot(mean_tilt, W['Y'][lab],'.', label=lab)
+        ax[2].plot(mean_tilt, W['Z'][lab],'.', label=lab)
     ax[2].set_xlabel(r'$\langle\theta_{tilt}\rangle$')
     ax[0].set_ylabel(r'$\Omega_x$ [rad/s]')
     ax[1].set_ylabel(r'$\Omega_y$ [rad/s]')
