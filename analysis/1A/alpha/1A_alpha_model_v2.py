@@ -54,9 +54,9 @@ def output(array, res_direct, res_reverse, reduced=False):
     if not reduced:
         print('typical element rotation axis-angle representation')
         print('even element')
-        print(array[1].as_rotvec())
+        print(array[2].as_rotvec())
         print('odd element')
-        print(array[-2].as_rotvec())
+        print(array[3].as_rotvec())
         print(' ')
 
     print('full ring rotation axis-angle representation')
@@ -74,10 +74,10 @@ def output(array, res_direct, res_reverse, reduced=False):
         print('spin frequency and n-bar axis (normalized)')
         print('direct (CW)')
         a, vec = normalize(res_direct.as_rotvec())
-        print(a*3e6, ' [rad/s]'); print(vec)
+        print(a*1e6, ' [rad/s]'); print(vec)
         print('reverse (CCW)')
         a, vec = normalize(res_reverse.as_rotvec())
-        print(a*3e6, ' [rad/s]'); print(vec)
+        print(a*1e6, ' [rad/s]'); print(vec)
         print(' ')
 
 def test_base(array, tilt, method):
@@ -135,14 +135,14 @@ if __name__ == '__main__':
     res_reverse_tilt = multiply(element_array[::-1])
     output(element_array, res_direct_tilt, res_reverse_tilt)
 
-    # print('strict FS (r-kick) model')
-    # print(' ')
-    # tilt = np.random.normal(0, 1e-4, N_elem)
-    # kick_array = fill(kick_array, tilt+1e-15, rkick)
-    # res_direct_fs = multiply(kick_array)
-    # kick_array = fill(kick_array, tilt_rev_sign*(tilt-1e-15), rkick)
-    # res_reverse_fs = multiply(kick_array[::-1])
-    # output(kick_array, res_direct_fs, res_reverse_fs)
+    print('strict FS (r-kick) model')
+    print(' ')
+    tilt = np.random.normal(0, 1e-4, N_elem)
+    kick_array = fill(kick_array, tilt+2e-15, rkick)
+    res_direct_fs = multiply(kick_array)
+    kick_array = fill(kick_array, tilt_rev_sign*(tilt-2e-15), rkick)
+    res_reverse_fs = multiply(kick_array[::-1])
+    output(kick_array, res_direct_fs, res_reverse_fs)
 
     # print('PAIR (Rx*Ry) model')
     # print(' ')
