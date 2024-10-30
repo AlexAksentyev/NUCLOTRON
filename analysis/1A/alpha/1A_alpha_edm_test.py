@@ -9,9 +9,9 @@ rkick = lambda dummy, theta: R.from_rotvec(theta*np.array([1, 0, 0])) # radial k
 vbend = lambda phi: R.from_rotvec(phi*np.array([0, 1, 0])) # vertical bend
 pair  = lambda phi, theta: rkick(0, theta)*vbend(phi) # bend followed by r-kick
 
-N_elem = 80 # total number of elements
+N_elem = 40 # total number of elements
 tilt = np.random.normal(0, 1e-4, N_elem)
-#tilt -= tilt.mean() # make strict zero mean tilt distribution
+tilt -= tilt.mean() # make strict zero mean tilt distribution
 
 element_array = np.zeros(N_elem, dtype=object)
 
@@ -49,37 +49,37 @@ def total_field(array):
     field[p+1] = multiply(array)    # N-1 - shift^(N-1)
     return field
 
-def output(array, res_direct, res_reverse, reduced=False):
+def output(array, res_direct_vec, res_reverse_vec, reduced=False):
     if not reduced:
         print('typical element rotation axis-angle representation')
         print('even element')
-        print(array[1].as_rotvec())
+        print(array[2].as_rotvec())
         print('odd element')
-        print(array[-2].as_rotvec())
+        print(array[3].as_rotvec())
         print(' ')
 
     print('full ring rotation axis-angle representation')
     print('direct (CW)')
-    print(res_direct.as_rotvec())
+    print(res_direct_vec)
     print('reverse (CCW)')
-    print(res_reverse.as_rotvec())
+    print(res_reverse_vec)
     print('absolute difference')
-    print(1e6*(np.abs(res_direct.as_rotvec()) - np.abs(res_reverse.as_rotvec())), ' [rad/sec]')
+    print(1e6*(np.abs(res_direct_vec) - np.abs(res_reverse_vec)), ' [rad/sec]')
     print('sum Wx')
-    print(1e6*(res_direct.as_rotvec()[0] + res_reverse.as_rotvec()[0]), ' [rad/sec]')
+    print(1e6*(res_direct_vec[0] + res_reverse_vec[0]), ' [rad/sec]')
     print(' ')
 
     if not reduced:
         print('spin frequency and n-bar axis (normalized)')
         print('direct (CW)')
-        a, vec = normalize(res_direct.as_rotvec())
-        print(a*3e6, ' [rad/s]'); print(vec)
+        a, vec = normalize(res_direct_vec)
+        print(a*1e6, ' [rad/s]'); print(vec)
         print('reverse (CCW)')
-        a, vec = normalize(res_reverse.as_rotvec())
-        print(a*3e6, ' [rad/s]'); print(vec)
+        a, vec = normalize(res_reverse_vec)
+        print(a*1e6, ' [rad/s]'); print(vec)
         print(' ')
 
-def test_base(array, tilt, edm, method):
+def base(array, tilt, edm, method):
     array = fill(array, tilt + edm, method)
     res_direct = multiply(array)
     array = fill(array, tilt_rev_sign*tilt + edm, method)
@@ -87,37 +87,32 @@ def test_base(array, tilt, edm, method):
     return res_direct.as_rotvec(), res_reverse.as_rotvec()
     
 if __name__ == '__main__':
-    print('quasi FS model')
+    print('quasi FS model'); method = ntilt
     print(' ')
-    method = ntilt
-
+    
     # null to eyeball
-    element_array = fill(element_array, tilt, method)
-    res_direct = multiply(element_array)
-    element_array = fill(element_array, tilt_rev_sign*tilt, method)
-    res_reverse = multiply(element_array[::-1])
-    output(element_array, res_direct, res_reverse)
+    res_direct_vec, res_reverse_vec = base(element_array, tilt, 0, method)
+    output(element_array, res_direct_vec, res_reverse_vec)
 
     # varying EDM
-    N_pnt = 13*5
+    N_pnt = 13*5; edm_spectrum = np.linspace(1e-16, 1e-4, N_pnt)
     direct_a_array  = np.zeros(N_pnt, dtype=[('abs', float), ('x', float), ('y', float), ('z', float)])
     reverse_a_array = np.zeros(N_pnt, dtype=[('abs', float), ('x', float), ('y', float), ('z', float)])
-    edm_spectrum = np.linspace(1e-16, 1e-4, N_pnt)  
     for i, edm in enumerate(edm_spectrum):
-        res_direct, res_reverse = test_base(element_array, tilt, edm, method)
-        direct_a_array[i]  = normalize(res_direct)[0], res_direct[0], *res_direct[1:]
-        reverse_a_array[i] = normalize(res_reverse)[0], res_reverse[0], *res_reverse[1:]
+        res_direct_vec, res_reverse_vec = base(element_array, tilt, edm, method)
+        direct_a_array[i]  = normalize(res_direct_vec)[0], res_direct_vec[0], *res_direct_vec[1:]
+        reverse_a_array[i] = normalize(res_reverse_vec)[0], res_reverse_vec[0], *res_reverse_vec[1:]
 
     fig, ax = plt.subplots(2,2, sharex='col')
     ax[0,0].plot(edm_spectrum, 3e6*direct_a_array['x'], '-.', label='CW')
     ax[0,0].plot(edm_spectrum, -3e6*reverse_a_array['x'], '-.', label='-CCW')
-    ax[1,0].plot(edm_spectrum, 3e6*(direct_a_array['x'] + reverse_a_array['x']), '-.')
+    ax[1,0].plot(edm_spectrum, 3e6*(direct_a_array['x'] + reverse_a_array['x']), '.')
     ax[0,0].set_ylabel(r'$\Omega_x$ [rad/s]'); ax[0,0].legend()
     ax[1,0].set_ylabel(r'$\Sigma \Omega_x$ [rad/s]')
     
     ax[0,1].plot(edm_spectrum, 3e6*direct_a_array['abs'], '-.', label='CW')
     ax[0,1].plot(edm_spectrum, 3e6*reverse_a_array['abs'], '-.', label='CCW')
-    ax[1,1].plot(edm_spectrum, 3e6*(direct_a_array['abs'] - reverse_a_array['abs']), '-.')
+    ax[1,1].plot(edm_spectrum, 3e6*(direct_a_array['abs'] - reverse_a_array['abs']), '.')
     ax[0,1].set_ylabel(r'$||\Omega||$ [rad/s]');   ax[0,1].legend()
     ax[1,1].set_ylabel(r'$\Delta ||\Omega||$ [rad/s]')
     for i in range(2):
