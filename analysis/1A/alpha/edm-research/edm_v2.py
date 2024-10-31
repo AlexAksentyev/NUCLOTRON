@@ -8,8 +8,8 @@ ntilt = lambda phi, theta: R.from_rotvec(phi/cos(theta)*np.array([sin(theta), co
 rkick = lambda dummy, theta: R.from_rotvec(theta*np.array([1, 0, 0])) # radial kick
 
 N_elem = 4 # total number of elements
-tilt_array = np.zeros(N_elem) #np.random.normal(0, 1e-4, N_elem)
-#tilt_array -= tilt_array.mean() # make strict zero mean tilt distribution
+tilt_array = np.random.normal(0, 1e-4, N_elem)
+tilt_array -= tilt_array.mean() # make strict zero mean tilt distribution
 
 tilt_rev_sign = -1
 to_sec = 1e6 # turns angle rad/turn to frequency rad/sec
@@ -62,19 +62,19 @@ def output(array, res_direct, res_reverse, reduced=False):
     print('reverse (CCW)')
     print(res_reverse.as_rotvec())
     print('absolute difference')
-    print(1e6*(np.abs(res_direct.as_rotvec()) - np.abs(res_reverse.as_rotvec())), ' [rad/sec]')
+    print(to_sec*(np.abs(res_direct.as_rotvec()) - np.abs(res_reverse.as_rotvec())), ' [rad/sec]')
     print('sum Wx')
-    print(1e6*(res_direct.as_rotvec()[0] + res_reverse.as_rotvec()[0]), ' [rad/sec]')
+    print(to_sec*(res_direct.as_rotvec()[0] + res_reverse.as_rotvec()[0]), ' [rad/sec]')
     print(' ')
 
     if not reduced:
         print('spin frequency and n-bar axis (normalized)')
         print('direct (CW)')
         a, vec = normalize(res_direct.as_rotvec())
-        print(a*3e6, ' [rad/s]'); print(vec)
+        print(a*to_sec, ' [rad/s]'); print(vec)
         print('reverse (CCW)')
         a, vec = normalize(res_reverse.as_rotvec())
-        print(a*3e6, ' [rad/s]'); print(vec)
+        print(a*to_sec, ' [rad/s]'); print(vec)
         print(' ')
 
 def base(tilt, method):
@@ -101,23 +101,23 @@ def edm_modify(mdm_roter, edm_kick):
 def fill_edm_mod(mdm_method, tilt_array, edm_kick):
     N = tilt_array.shape[0]
     array = np.zeros(N, dtype=object)
-    print('edm_kick = ', edm_kick)
+    ###print('edm_kick = ', edm_kick)
     for i in range(0, N, 2): # even members
         mdm_rotation_even = mdm_method(+pi/N/2, tilt_array[i])
         mdm_rotation_odd = mdm_method(-pi/N/2, tilt_array[i+1])
-        print('mdm rotation (even)', mdm_rotation_even.as_rotvec())
-        print('edm kick', rkick(0, edm_kick).as_rotvec())
+        ###print('mdm rotation (even)', mdm_rotation_even.as_rotvec())
+        ###print('edm kick', rkick(0, edm_kick).as_rotvec())
         array[i] = edm_modify(mdm_rotation_even, edm_kick) # rotations
         array[i+1] = edm_modify(mdm_rotation_odd, edm_kick)
-        print('mdm+edm rotation (even)', array[i].as_rotvec())
+        ###print('mdm+edm rotation (even)', array[i].as_rotvec())
     return array
 
 def base_edm_mode(tilt_array, mdm_method, edm_kick):
-    print('+tilt')
-    array = fill_edm_mod(mdm_method, tilt_array, edm_kick); print(' ')
+    ###print('+tilt')
+    array = fill_edm_mod(mdm_method, tilt_array, edm_kick); ###print(' ')
     res_direct = multiply(array) # total direct spin-rotation
-    print('-tilt')
-    array = fill_edm_mod(mdm_method, tilt_rev_sign*tilt_array, edm_kick); print(' ')
+    ###print('-tilt')
+    array = fill_edm_mod(mdm_method, tilt_rev_sign*tilt_array, edm_kick); ###print(' ')
     res_reverse = multiply(array[::-1]) # total reverse spin-rotation
     return array, res_direct, res_reverse # returned as rotations
 
@@ -180,8 +180,8 @@ if __name__ == '__main__':
     direct_av_array, reverse_av_array = test_outer(tilt_array, method, edm_kick_spectrum)
 
     fig, ax = plt.subplots(2,2, sharex='col')
-    ax[0,0].set_title('test: outer (total ring frequency)')
-    ax[0,1].set_title(r'ring: {}, $\langle tilt\rangle = {:4.2e} [rad]$'.format(model, tilt_array.mean()))
+    ax[0,0].set_title('test: outer (total {} ring frequency)'.format(model))
+    ax[0,1].set_title(r'$tilt = {:4.2e} \pm {:4.2e} [rad]$'.format(tilt_array.mean(), tilt_array.std()))
     ax[0,0].plot(edm_kick_spectrum, to_sec*direct_av_array['x'], '-.', label='CW')
     ax[0,0].plot(edm_kick_spectrum, to_sec*reverse_av_array['x'], '-.', label='CCW')
     ax[1,0].plot(edm_kick_spectrum, to_sec*(direct_av_array['x'] + reverse_av_array['x']), '.')
