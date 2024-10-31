@@ -9,7 +9,7 @@ rkick = lambda dummy, theta: R.from_rotvec(theta*np.array([1, 0, 0])) # radial k
 
 N_elem = 4 # total number of elements
 tilt_array = np.random.normal(0, 1e-4, N_elem)
-tilt_array -= tilt_array.mean() # make strict zero mean tilt distribution
+#tilt_array -= tilt_array.mean() # make strict zero mean tilt distribution
 
 tilt_rev_sign = -1
 to_sec = 1e6 # turns angle rad/turn to frequency rad/sec
@@ -84,7 +84,17 @@ def base(tilt, method):
     res_reverse = multiply(array[::-1]) # total reverse spin-rotation
     return array, res_direct, res_reverse # returned as rotations
 
-edm_modify = lambda mdm_roter, edm_kick: R.from_rotvec(mdm_roter.as_rotvec() + rkick(0, edm_kick).as_rotvec()) # modifies mdm-rotation adding edm-effect
+edm_modify_as_rkick = lambda mdm_roter, edm_kick: R.from_rotvec(mdm_roter.as_rotvec() + rkick(0, edm_kick).as_rotvec()) # modifies mdm-rotation adding edm-effect
+
+def edm_modify(mdm_roter, edm_kick):
+    z_axis = np.array([0,0,1])
+    mdm_vec = mdm_roter.as_rotvec();       mdm_a, mdm_nbar = normalize(mdm_vec)
+    if mdm_nbar[1] == 0: #      if no vertical component in mdm,
+        edm_vec = mdm_nbar[0]*edm_kick*mdm_nbar # then we're wokring with FS and edm_vec // mdm_vec
+    else: #   otherwise compute edm kick axis as velocity x magnetic field
+        edm_nbar = np.cross(z_axis, mdm_nbar);    edm_vec = edm_kick*edm_nbar
+    return R.from_rotvec(mdm_vec + edm_vec)
+    
 
 def fill_edm_mod(mdm_method, tilt_array, edm_kick):
     N = tilt_array.shape[0]
@@ -148,7 +158,7 @@ if __name__ == '__main__':
     output(element_array1, res_direct1, res_reverse1)
 
     ### varying EDM
-    edm_kick_spectrum = np.linspace(-5e-9, 5e-9, 1000)
+    edm_kick_spectrum = np.linspace(-5e-5, 5e-5, 1000)
 
     ## local (element-proper) frequency
     element_tilt = 1e-5 # tilt producing the MDM-caused radial effect

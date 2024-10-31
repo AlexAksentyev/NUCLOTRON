@@ -1,3 +1,6 @@
+## !!!! this scrpt models the EDM-presence inappropriately! refer to edm_v2.py code
+
+
 import numpy as np
 from numpy import pi, cos, sin
 from scipy.spatial.transform import Rotation as R
@@ -11,7 +14,7 @@ pair  = lambda phi, theta: rkick(0, theta)*vbend(phi) # bend followed by r-kick
 
 N_elem = 40 # total number of elements
 tilt = np.random.normal(0, 1e-4, N_elem)
-tilt -= tilt.mean() # make strict zero mean tilt distribution
+# tilt -= tilt.mean() # make strict zero mean tilt distribution
 
 element_array = np.zeros(N_elem, dtype=object)
 
@@ -99,11 +102,11 @@ def run_through(edm_spectrum):
     
     
 if __name__ == '__main__':
-    print('quasi FS model'); method = ntilt
+    print('strict FS model'); method = rkick
     print(' ')
     
     # null to eyeball
-    res_direct_vec, res_reverse_vec = base(element_array, tilt, 0, method) # total frequency vectors [angle*axis]
+    res_direct_vec, res_reverse_vec = base(element_array, tilt, 1e-16, method) # total frequency vectors [angle*axis]
     output(element_array, res_direct_vec, res_reverse_vec)
 
     # varying EDM
