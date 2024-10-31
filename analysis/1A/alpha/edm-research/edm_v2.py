@@ -8,7 +8,7 @@ ntilt = lambda phi, theta: R.from_rotvec(phi/cos(theta)*np.array([sin(theta), co
 rkick = lambda dummy, theta: R.from_rotvec(theta*np.array([1, 0, 0])) # radial kick
 
 N_elem = 4 # total number of elements
-tilt_array = np.random.normal(0, 1e-4, N_elem)
+tilt_array = np.zeros(N_elem) #np.random.normal(0, 1e-4, N_elem)
 #tilt_array -= tilt_array.mean() # make strict zero mean tilt distribution
 
 tilt_rev_sign = -1
@@ -89,8 +89,10 @@ edm_modify_as_rkick = lambda mdm_roter, edm_kick: R.from_rotvec(mdm_roter.as_rot
 def edm_modify(mdm_roter, edm_kick):
     z_axis = np.array([0,0,1])
     mdm_vec = mdm_roter.as_rotvec();       mdm_a, mdm_nbar = normalize(mdm_vec)
-    if mdm_nbar[1] == 0: #      if no vertical component in mdm,
-        edm_vec = mdm_nbar[0]*edm_kick*mdm_nbar # then we're wokring with FS and edm_vec // mdm_vec
+    if mdm_a == 0: #   if the element doesn't do any mdm spin-rotation (this only happens in ideal/"untilted" FS),
+        edm_vec = edm_kick*np.array([1,0,0]) # then edm would be the only spin-vector-driving force, and do a radial rotation
+    elif mdm_nbar[1] == 0: #   if the element does an mdm-rotation, but no vertical component, then we're working with FS
+        edm_vec = mdm_nbar[0]*edm_kick*mdm_nbar # and edm_vec // mdm_vec; mdm_nbar[0] factor to keep edm constant-direction
     else: #   otherwise compute edm kick axis as velocity x magnetic field
         edm_nbar = np.cross(z_axis, mdm_nbar);    edm_vec = edm_kick*edm_nbar
     return R.from_rotvec(mdm_vec + edm_vec)
