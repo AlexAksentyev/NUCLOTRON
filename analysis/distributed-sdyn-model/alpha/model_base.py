@@ -122,7 +122,7 @@ class Quad(Element): # linear approximation!  ## pure magnetic element, both EDM
     def __init__(self, xshift, yshift, grad, length=1):
         deviation = np.sqrt(xshift**2 + yshift**2)
         restoring_force = deviation*grad  # G [T/m] * d [m] = B [T]
-        force_axis = np.array([xshift, yshift, 0])
+        force_axis = -np.array([xshift, yshift, 0])
         if deviation!=0:
             force_axis /= deviation # normalize
         
@@ -215,7 +215,7 @@ if __name__ == '__main__':
     free_array = [Element.from_rotvec([0,0,0])                  for i in range(lattice_periodicity)]
     comb_array = [Combined(bend_angle, tilts[i], 'partial')     for i in range(lattice_periodicity*2)]
 
-    # fiirst way to define, most abstractly
+    # first way to define, most abstractly
     element_array1 = [Element((spin_tune-1)*bend_angle*(-1)**i, [0,1,0], tilts[i]) for i in range(lattice_periodicity*2)]
     reverse_array1 = [Element.from_rotator(e.mimage) for e in element_array1[::-1]] # for testing
     l10 = Lattice(element_array1)
