@@ -25,8 +25,8 @@ def normalize(vec):
     norm = np.sqrt(np.sum(np.square(vec)))
     return (norm, vec/norm) if norm!=0 else (0, vec)
 
-def add_edm(mdm_angle, mdm_axis):
-    edm_angle = edm_tune/spin_tune*mdm_angle
+def add_edm(mdm_angle, mdm_axis, edm_tune_ = edm_tune):
+    edm_angle = edm_tune_/spin_tune*mdm_angle
     beam_axis = np.array([0, 0, 1])
     edm_axis = np.cross(beam_axis, mdm_axis)
 
@@ -47,10 +47,11 @@ class Element:
         self.__angle = angle/cos(tilt_angle) # angle amplfied to keep By magnitude <-> c.o. (invariant)
 
         mirror_axis = np.array([-1,1,1])*self.__axis
+        mirror_angle = self.__angle
 
         self.__rotator_ideal  = R.from_rotvec(self.__angle_ideal*self.__axis_ideal)
         self.__rotator_active = R.from_rotvec(self.__angle      *self.__axis)
-        self.__mirror_rotator = R.from_rotvec(self.__angle      *mirror_axis)
+        self.__mirror_rotator = R.from_rotvec(mirror_angle      *mirror_axis)
 
         self._quat = self.__rotator_active._quat # apparently needed for np.cumprod
         self._single = self.__rotator_active._single
@@ -218,22 +219,22 @@ if __name__ == '__main__':
     # first way to define, most abstractly
     element_array1 = [Element((spin_tune-1)*bend_angle*(-1)**i, [0,1,0], tilts[i]) for i in range(lattice_periodicity*2)]
     reverse_array1 = [Element.from_rotator(e.mimage) for e in element_array1[::-1]] # for testing
-    l10 = Lattice(element_array1)
+    #l10 = Lattice(element_array1)
     # a more concrete way to defne a lattice array
     element_array2  = list(np.array([bend_array, wien_array, quad_array]).flatten('F'))
-    element_array20 = list(np.array([bend_array, wien_array, free_array]).flatten('F')) # for testing, no quads
+    #element_array20 = list(np.array([bend_array, wien_array, free_array]).flatten('F')) # for testing, no quads
     element_array1 = np.array(element_array1); element_array1.shape=(lattice_periodicity, 2) # for testing l2 - l1
     quad_array = np.array(quad_array)
     element_array1 = list(np.column_stack([element_array1, quad_array]).flatten('C'))
 
     l1  = Lattice(element_array1)
     l2  = Lattice(element_array2)
-    l20 = Lattice(element_array20)
-    l_fs = Lattice(comb_array)
+    # l20 = Lattice(element_array20)
+    # l_fs = Lattice(comb_array)
 
     s = np.array([0, 0, 1]) # longitudinal spin-vector
-    tracking = track_co(s, l_fs.direct, 300000, 5000)
-    plt.plot(tracking['n']*TOF_R, tracking['y'])
-    plt.xlabel('time [s]'); plt.ylabel('s_y')
-    plt.ticklabel_format(style='sci', scilimits=(0,0), axis='both')
+    # tracking = track_co(s, l_fs.direct, 300000, 5000)
+    # plt.plot(tracking['n']*TOF_R, tracking['y'])
+    # plt.xlabel('time [s]'); plt.ylabel('s_y')
+    # plt.ticklabel_format(style='sci', scilimits=(0,0), axis='both')
 
