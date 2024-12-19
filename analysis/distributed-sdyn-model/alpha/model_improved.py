@@ -1,7 +1,5 @@
 from scipy.spatial.transform import Rotation as R
 import numpy as np; from numpy import pi, cos, sin
-from copy import deepcopy
-import time
 
 CLIGHT = 3e8 # in [m/s]
 
@@ -124,8 +122,16 @@ class Element(Rotator):
         return cls(mdm_rotator, edm_rotator)
 
 class RotatorField(np.ndarray):
-    def __new__(cls, size):
-        obj = super().__new__(cls, (size,3))
+    def __new__(cls, lattice):
+        size = lattice.size
+        obj = super().__new__(cls, (size, 3))
+        runner = lattice.element_array
+        for p in range(size-1):
+            rvec = np.prod(runner, 0).as_rotvec()
+            obj[p] = rvec#[0], *rvec[1:]
+            e0 = runner[0]; runner.pop(0); runner += [e0] # shift by one element
+        rvec = np.prod(runner, 0).as_rotvec()
+        obj[p+1] = rvec#[0], *rvec[1:]
         return obj
     def plot(self):
         pass
@@ -135,47 +141,33 @@ class RotatorField(np.ndarray):
         return self[:,0]
     @property
     def y(self):
-        return self[:1]
+        return self[:,1]
     @property
     def z(self):
-        return self[:2]
+        return self[:,2]
 
 class Lattice:
     def __init__(self, element_array):
+        self.__size = len(element_array)
         self.__direct_array = element_array # list of Elements
         self.__reverse_array = [Rotator.from_rotator(e.mimage) for e in element_array[::-1]] # list of Elements
-        start = time.time()
         self.__dirprod = np.prod(element_array, 0)
         self.__revprod = np.prod(self.__reverse_array, 0)
-        end = time.time()
-        print('prod time: ', end-start)
-
-        ## compute n-field
-        start = time.time()
-        N = len(element_array)
-        self.__nfield = RotatorField(N)
-        runner = deepcopy(element_array)
-        for p in range(N-1):
-            rvec = np.cumprod(runner)[-1].as_rotvec()
-            self.__nfield[p] = rvec#[0], *rvec[1:]
-            e0 = runner[0]; runner.pop(0); runner += [e0] # shift by one element
-        rvec = np.cumprod(runner)[-1].as_rotvec()
-        self.__nfield[p+1] = rvec#[0], *rvec[1:]
-        end = time.time()
-        print('nfield time: ', end-start)
 
     def __getitem__(self, key):
         return self.__direct_array[key]
-    
+    @property
+    def size(self):
+        return self.__size
+    @property
+    def element_array(self):
+        return self.__direct_array
     @property
     def direct(self):
         return self.__dirprod
     @property
     def reverse(self):
         return self.__revprod
-    @property
-    def nfield(self):
-        return self.__nfield
 
 
 if __name__ == '__main__':
