@@ -1,6 +1,7 @@
 from scipy.spatial.transform import Rotation as R
 import numpy as np; from numpy import pi, cos, sin
 from copy import deepcopy
+import time
 
 CLIGHT = 3e8 # in [m/s]
 
@@ -143,10 +144,14 @@ class Lattice:
     def __init__(self, element_array):
         self.__direct_array = element_array # list of Elements
         self.__reverse_array = [Rotator.from_rotator(e.mimage) for e in element_array[::-1]] # list of Elements
-        self.__cumprod = np.cumprod(element_array)
-        self.__revprod = np.cumprod(self.__reverse_array)
+        start = time.time()
+        self.__dirprod = np.prod(element_array, 0)
+        self.__revprod = np.prod(self.__reverse_array, 0)
+        end = time.time()
+        print('prod time: ', end-start)
 
         ## compute n-field
+        start = time.time()
         N = len(element_array)
         self.__nfield = RotatorField(N)
         runner = deepcopy(element_array)
@@ -156,16 +161,18 @@ class Lattice:
             e0 = runner[0]; runner.pop(0); runner += [e0] # shift by one element
         rvec = np.cumprod(runner)[-1].as_rotvec()
         self.__nfield[p+1] = rvec#[0], *rvec[1:]
+        end = time.time()
+        print('nfield time: ', end-start)
 
     def __getitem__(self, key):
         return self.__direct_array[key]
     
     @property
     def direct(self):
-        return self.__cumprod[-1]
+        return self.__dirprod
     @property
     def reverse(self):
-        return self.__revprod[-1]
+        return self.__revprod
     @property
     def nfield(self):
         return self.__nfield
