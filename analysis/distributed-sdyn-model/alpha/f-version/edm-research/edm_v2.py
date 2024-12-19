@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt; plt.ion()
 ntilt = lambda phi, theta: R.from_rotvec(phi/cos(theta)*np.array([sin(theta), cos(theta), 0])) # tilted element's proper axis
 rkick = lambda dummy, theta: R.from_rotvec(theta*np.array([1, 0, 0])) # radial kick
 
-N_elem = 4 # total number of elements
-tilt_array = np.random.normal(0, 1e-4, N_elem)
+N_elem = 80 # total number of elements
+tilt_array = np.zeros(N_elem) # np.random.normal(0, 1e-4, N_elem)
 tilt_array -= tilt_array.mean() # make strict zero mean tilt distribution
 
 tilt_rev_sign = -1

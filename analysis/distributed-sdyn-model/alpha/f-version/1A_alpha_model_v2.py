@@ -17,6 +17,7 @@ kick_array = np.zeros(N_elem, dtype=object)
 pair_array = np.zeros(N_elem, dtype=object)
 
 tilt_rev_sign = -1
+edm = 0
 
 def normalize(vec):
     norm = np.sqrt(np.sum(vec**2))
@@ -129,18 +130,18 @@ def test_permutations(): # same distro but different order
 if __name__ == '__main__':
     print('QFS tilted model')
     print(' ')
-    element_array = fill(element_array, tilt+2e-15, ntilt)
+    element_array = fill(element_array, tilt+edm, ntilt)
     res_direct_tilt = multiply(element_array)
-    element_array = fill(element_array, tilt_rev_sign*(tilt-2e-15), ntilt)
+    element_array = fill(element_array, tilt_rev_sign*(tilt-edm), ntilt)
     res_reverse_tilt = multiply(element_array[::-1])
     output(element_array, res_direct_tilt, res_reverse_tilt)
 
     print('strict FS (r-kick) model')
     print(' ')
     tilt = np.random.normal(0, 1e-4, N_elem)
-    kick_array = fill(kick_array, tilt+2e-15, rkick)
+    kick_array = fill(kick_array, tilt+edm, rkick)
     res_direct_fs = multiply(kick_array)
-    kick_array = fill(kick_array, tilt_rev_sign*(tilt-2e-15), rkick)
+    kick_array = fill(kick_array, tilt_rev_sign*(tilt-edm), rkick)
     res_reverse_fs = multiply(kick_array[::-1])
     output(kick_array, res_direct_fs, res_reverse_fs)
 
